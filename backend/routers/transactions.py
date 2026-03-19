@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case, func
+from sqlalchemy import case, func, text
 from sqlmodel import Session, col, select
 
 from backend.database import get_session
@@ -56,7 +56,7 @@ def monthly_summary(session: Annotated[Session, Depends(get_session)]):
             func.count(Transaction.id).label("tx_count"),
         )
         .group_by(Transaction.month)
-        .order_by(Transaction.month)
+        .order_by(col(Transaction.month))
     ).all()
     return [
         {
@@ -81,7 +81,7 @@ def category_breakdown(
     )
     if month:
         q = q.where(Transaction.month == month)
-    q = q.group_by(Transaction.category).order_by(func.sum(Transaction.amount))
+    q = q.group_by(Transaction.category).order_by(text("total_neg"))
 
     rows = session.exec(q).all()
     return [
