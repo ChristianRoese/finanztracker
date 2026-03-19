@@ -2,7 +2,8 @@ from typing import Annotated
 from collections import defaultdict
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from backend.database import get_session
@@ -21,7 +22,7 @@ def monthly_report(
     txs = session.exec(select(Transaction).where(Transaction.month == month_str)).all()
 
     if not txs:
-        raise HTTPException(status_code=404, detail=f"Keine Transaktionen für {month_str}")
+        return {"month": month_str, "income": 0.0, "expenses": 0.0, "net": 0.0, "savings_rate": 0.0, "categories": []}
 
     income = sum(tx.amount for tx in txs if tx.amount > 0)
     expenses = sum(abs(tx.amount) for tx in txs if tx.amount < 0)
@@ -65,13 +66,19 @@ def category_trends(
             y -= 1
     month_list.reverse()
 
-    txs = session.exec(
-        select(Transaction).where(Transaction.month.in_(month_list), Transaction.amount < 0, Transaction.category != "Einnahmen")
+    rows = session.exec(
+        select(Transaction.month, Transaction.category, func.sum(func.abs(Transaction.amount)))
+        .where(
+            Transaction.month.in_(month_list),
+            Transaction.amount < 0,
+            Transaction.category != "Einnahmen",
+        )
+        .group_by(Transaction.month, Transaction.category)
     ).all()
 
     data: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    for tx in txs:
-        data[tx.category][tx.month] += abs(tx.amount)
+    for month_val, category, total in rows:
+        data[category][month_val] = total
 
     series = [
         {

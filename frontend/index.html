@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanztracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-mark">FT</span>
+    <span class="logo-text">Finanz<br>tracker</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#" class="nav-link active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a></li>
+    <li><a href="#" class="nav-link" data-view="transactions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Transaktionen
+    </a></li>
+    <li><a href="#" class="nav-link" data-view="etf">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      ETF Portfolio
+    </a></li>
+    <li><a href="#" class="nav-link" data-view="import">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      PDF Import
+    </a></li>
+  </ul>
+  <div class="sidebar-footer">
+    <div class="api-status" id="apiStatus">
+      <span class="status-dot"></span>
+      <span class="status-text">Verbinde…</span>
+    </div>
+  </div>
+</nav>
+
+<main class="main-content">
+
+  <!-- ── DASHBOARD VIEW ── -->
+  <section class="view active" id="view-dashboard">
+    <div class="view-header">
+      <h1>Dashboard</h1>
+      <div class="month-selector">
+        <button class="btn-icon" id="monthPrev">&#8592;</button>
+        <span id="monthLabel">Gesamt</span>
+        <button class="btn-icon" id="monthNext">&#8594;</button>
+        <button class="btn-secondary" id="monthAll">Alle</button>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card">
+        <div class="kpi-label">Ausgaben</div>
+        <div class="kpi-value negative" id="kpiOut">–</div>
+        <div class="kpi-sub" id="kpiOutSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Einnahmen</div>
+        <div class="kpi-value positive" id="kpiIn">–</div>
+        <div class="kpi-sub" id="kpiInSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Sparquote</div>
+        <div class="kpi-value accent" id="kpiSavings">–</div>
+        <div class="kpi-sub" id="kpiSavingsSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Netto-Saldo</div>
+        <div class="kpi-value" id="kpiNet">–</div>
+        <div class="kpi-sub" id="kpiNetSub"></div>
+      </div>
+
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Monatsvergleich</div>
+        <div class="chart-wrap h280"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Verteilung (aktueller Monat)</div>
+        <div class="chart-wrap h200"><canvas id="donutChart"></canvas></div>
+        <div id="donutLegend" class="donut-legend"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Ausgaben nach Kategorie</div>
+        <div id="catBars" class="cat-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Trend (letzte 6 Monate)</div>
+        <div class="chart-wrap h220"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TRANSACTIONS VIEW ── -->
+  <section class="view" id="view-transactions">
+    <div class="view-header">
+      <h1>Transaktionen</h1>
+      <div class="filter-row">
+        <select id="txFilterMonth" class="select-input">
+          <option value="">Alle Monate</option>
+        </select>
+        <select id="txFilterCat" class="select-input">
+          <option value="">Alle Kategorien</option>
+        </select>
+        <input type="text" id="txSearch" class="text-input" placeholder="Suchen…">
+      </div>
+    </div>
+    <div class="card no-pad">
+      <table class="data-table" id="txTable">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Händler</th>
+            <th>Beschreibung</th>
+            <th>Kategorie</th>
+            <th class="right">Betrag</th>
+          </tr>
+        </thead>
+        <tbody id="txBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="txPagination"></div>
+  </section>
+
+  <!-- ── ETF VIEW ── -->
+  <section class="view" id="view-etf">
+    <div class="view-header">
+      <h1>ETF Portfolio</h1>
+      <button class="btn-primary" id="refreshPricesBtn">Preise aktualisieren</button>
+    </div>
+
+    <div class="kpi-row" id="etfKpiRow">
+      <div class="kpi-card">
+        <div class="kpi-label">Investiert</div>
+        <div class="kpi-value accent" id="etfInvested">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aktueller Wert</div>
+        <div class="kpi-value" id="etfValue">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gewinn/Verlust</div>
+        <div class="kpi-value" id="etfGain">–</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Performance</div>
+        <div class="kpi-value" id="etfPerf">–</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Positionen</div>
+        <div id="etfPositions"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Kaufhistorie</div>
+        <div class="chart-wrap h260"><canvas id="etfHistoryChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Position hinzufügen</div>
+      <form id="etfAddForm" class="etf-add-form">
+        <div class="etf-form-row">
+          <div class="etf-form-field">
+            <label class="form-label">ISIN *</label>
+            <input type="text" id="etfAddIsin" class="text-input" placeholder="z. B. IE00B4L5Y983" required>
+          </div>
+          <div class="etf-form-field">
+            <label class="form-label">Name *</label>
+            <input type="text" id="etfAddName" class="text-input" placeholder="z. B. iShares Core MSCI World" required>
+          </div>
+          <div class="etf-form-field">
+            <label class="form-label">WKN</label>
+            <input type="text" id="etfAddWkn" class="text-input" placeholder="z. B. A0RPWH">
+          </div>
+          <div class="etf-form-field">
+            <label class="form-label">Ticker (Yahoo)</label>
+            <input type="text" id="etfAddTicker" class="text-input" placeholder="z. B. IWDA.AS">
+          </div>
+          <div class="etf-form-field">
+            <label class="form-label">Sparplan EUR/Monat</label>
+            <input type="number" id="etfAddAmount" class="text-input" placeholder="0" min="0" step="0.01">
+          </div>
+        </div>
+        <div id="etfAddError" class="form-error" style="display:none"></div>
+        <button type="submit" class="btn-primary" id="etfAddBtn">Hinzufügen</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Alle Käufe</div>
+      <div class="scroll-table">
+        <table class="data-table" id="etfPurchaseTable">
+          <thead>
+            <tr><th>Datum</th><th>Position</th><th>Preis</th><th>Stück</th><th class="right">Gesamt</th></tr>
+          </thead>
+          <tbody id="etfPurchaseBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── IMPORT VIEW ── -->
+  <section class="view" id="view-import">
+    <div class="view-header">
+      <h1>PDF Import</h1>
+    </div>
+
+    <div class="import-area">
+      <div class="drop-zone" id="dropZone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>DKB Kontoauszug PDF hier ablegen</p>
+        <p class="drop-sub">oder klicken zum Auswählen</p>
+        <input type="file" id="fileInput" accept=".pdf" multiple hidden>
+      </div>
+
+      <div id="importQueue" class="import-queue"></div>
+
+      <div class="card" id="importResult" style="display:none">
+        <div class="card-label">Import Ergebnis</div>
+        <div id="importResultContent"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Importierte Auszüge</div>
+      <div id="importHistory"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Category Edit Modal -->
+<div class="modal-overlay" id="catModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Kategorie ändern</span>
+      <button class="btn-icon" id="catModalClose">✕</button>
+    </div>
+    <div id="catModalDesc" class="modal-desc"></div>
+    <select id="catModalSelect" class="select-input full-width"></select>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="catModalCancel">Abbrechen</button>
+      <button class="btn-primary" id="catModalSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js" type="module"></script>
+</body>
+</html>
