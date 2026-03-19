@@ -66,7 +66,7 @@ def category_trends(
     month_list.reverse()
 
     txs = session.exec(
-        select(Transaction).where(Transaction.month.in_(month_list), Transaction.amount < 0)
+        select(Transaction).where(Transaction.month.in_(month_list), Transaction.amount < 0, Transaction.category != "Einnahmen")
     ).all()
 
     data: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))

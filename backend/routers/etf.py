@@ -1,0 +1,50 @@
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, col, select
+
+from backend.database import get_session
+from backend.models.etf import ETFPosition, ETFPurchase
+from backend.services.etf_service import get_portfolio_summary, refresh_all_prices
+
+router = APIRouter(prefix="/api/etf", tags=["etf"])
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
+
+@router.get("/positions")
+def get_positions(session: SessionDep) -> list[dict]:
+    return get_portfolio_summary(session)
+
+
+@router.post("/positions", status_code=201)
+def create_position(
+    isin: Annotated[str, Query(min_length=1)],
+    name: Annotated[str, Query(min_length=1)],
+    session: SessionDep,
+    monthly_amount: float = 0.0,
+    wkn: str = "",
+    ticker: str = "",
+) -> ETFPosition:
+    existing = session.exec(select(ETFPosition).where(ETFPosition.isin == isin)).first()
+    if existing:
+        raise HTTPException(409, f"Position mit ISIN {isin} existiert bereits")
+    pos = ETFPosition(isin=isin, name=name, wkn=wkn, ticker=ticker, monthly_amount=monthly_amount)
+    session.add(pos)
+    session.commit()
+    session.refresh(pos)
+    return pos
+
+
+@router.post("/refresh-prices")
+def refresh_prices(session: SessionDep) -> dict:
+    updated = refresh_all_prices(session)
+    return {"updated": updated, "count": len(updated)}
+
+
+@router.get("/purchases")
+def get_purchases(session: SessionDep) -> list[ETFPurchase]:
+    purchases = session.exec(
+        select(ETFPurchase).order_by(col(ETFPurchase.date).desc())
+    ).all()
+    return list(purchases)
