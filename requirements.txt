@@ -1,0 +1,10 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+sqlmodel==0.0.22
+pdfplumber==0.11.4
+anthropic==0.40.0
+yfinance==0.2.50
+apscheduler==3.10.4
+python-multipart==0.0.17
+aiofiles==24.1.0
+httpx==0.28.1
