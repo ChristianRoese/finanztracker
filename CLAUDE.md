@@ -142,8 +142,8 @@ price_eur: float
 - `GET  /api/etf/performance` – Performance-Übersicht
 
 ### Reports
-- `GET  /api/reports/monthly/{year}/{month}` – Monatsbericht
-- `GET  /api/reports/trends` – Kategorien-Trends über Zeit
+- `GET  /api/reports/monthly/{year}/{month}` – Monatsbericht (200 mit Nullen wenn kein Monat vorhanden)
+- `GET  /api/reports/trends?months=6` – Kategorien-Trends (nur Kategorien mit >0 in mind. einem Monat, "Einnahmen" ausgeschlossen)
 
 ## Kategorien (fest definiert)
 ```python
@@ -185,6 +185,12 @@ CORS_ORIGINS=http://localhost:3000,http://192.168.x.x:8080
 
 ## ETF-Erweiterung
 Neue ISINs in `backend/services/etf_service.py` → `ISIN_TO_TICKER` dict eintragen. Ticker auf justetf.com oder Yahoo Finance finden.
+
+## Coding-Pitfalls (aus Code Review)
+- **`col()` zwingend**: `col(Model.field).desc()` — ohne `col()` gibt es einen RuntimeError
+- **SQL-Aggregation bevorzugen**: `func.sum()` + `group_by()` statt Python-side defaultdict
+- **Frontend XSS**: `escHtml()` auch in `onclick`-Attributen, nicht nur im sichtbaren Text
+- **APScheduler**: eigene `Session(engine)` im Job öffnen, nie Request-Session weitergeben
 
 ## Bekannte DKB-Eigenheiten
 - Wertpapierabrechnungen tauchen als reguläre Buchungen auf → via "Wertpapierabrechnung" im Text erkennen und als ETF-Kauf importieren

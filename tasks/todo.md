@@ -1,6 +1,6 @@
 # Finanztracker – Task Board
 
-## Status: Sprint 2 aktiv
+## Status: Sprint 3 aktiv
 
 ---
 
@@ -21,31 +21,23 @@
 - [x] **S1-12** Frontend: Transaktionsliste mit Filter + manuelle Kategorie-Änderung
 - [x] **S1-13** Docker-Build testen + README mit Setup-Anleitung
 
-### Sprint 2 – ETF Portfolio Tracking (teilweise)
+### Sprint 2 – ETF Portfolio Tracking
 - [x] **S2-01** ETFPosition + ETFPurchase + ETFPrice Modelle
 - [x] **S2-02** ETF-Service: yfinance Preis-Fetching (ISIN → Ticker-Mapping)
 - [x] **S2-03** Wertpapierabrechnungen aus PDF-Import automatisch als ETF-Käufe erkennen
 - [x] **S2-04** ETF-Router: Positionen, Performance, Preise refreshen
+- [x] **S2-05** Frontend: ETF-Portfolio Tab (Gesamtwert, Performance, Kaufhistorie, Position hinzufügen)
 - [x] **S2-06** Hintergrund-Job: täglicher Preis-Refresh (APScheduler)
 
-### Sprint 3 – Reports (teilweise)
+### Sprint 3 – Reports & Komfort (teilweise)
 - [x] **S3-01** Monatsbericht-Endpoint (`GET /api/reports/monthly/{year}/{month}`)
 - [x] **S3-02** Kategorien-Trends (`GET /api/reports/trends`)
-
----
-
-## 🔄 Sprint 2 – ETF Portfolio Tracking (offen)
-
-- [ ] **S2-05** Frontend: ETF-Portfolio Tab
-  - Gesamtwert, invested vs. aktuell
-  - Performance pro Position
-  - Sparplan-Verlauf (Kaufhistorie)
+- [x] **S3-03** Duplikat-Erkennung beim PDF-Import (via `import_hash` SHA256)
 
 ---
 
 ## 📋 Sprint 3 – Reports & Komfort (offen)
 
-- [ ] **S3-03** Duplikat-Erkennung beim PDF-Import (gleiche Buchung doppelt importieren verhindern)
 - [ ] **S3-04** Manuelle Transaktionen hinzufügen (Formular)
 - [ ] **S3-05** Kategorie-Regeln (z.B. "Globus" → immer "Lebensmittel") persistent speichern
 - [ ] **S3-06** CSV-Export
