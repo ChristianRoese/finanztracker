@@ -1,0 +1,84 @@
+from typing import Annotated
+from collections import defaultdict
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select
+
+from backend.database import get_session
+from backend.models.transaction import Transaction
+
+router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+@router.get("/monthly/{year}/{month}")
+def monthly_report(
+    year: int,
+    month: int,
+    session: Annotated[Session, Depends(get_session)],
+):
+    month_str = f"{year}-{month:02d}"
+    txs = session.exec(select(Transaction).where(Transaction.month == month_str)).all()
+
+    if not txs:
+        raise HTTPException(status_code=404, detail=f"Keine Transaktionen für {month_str}")
+
+    income = sum(tx.amount for tx in txs if tx.amount > 0)
+    expenses = sum(abs(tx.amount) for tx in txs if tx.amount < 0)
+    net = income - expenses
+    savings_rate = round((net / income * 100), 2) if income > 0 else 0.0
+
+    cat_totals: dict[str, float] = defaultdict(float)
+    for tx in txs:
+        if tx.amount < 0:
+            cat_totals[tx.category] += abs(tx.amount)
+
+    categories = [
+        {"category": k, "total": round(v, 2)}
+        for k, v in sorted(cat_totals.items(), key=lambda x: -x[1])
+    ]
+
+    return {
+        "month": month_str,
+        "income": round(income, 2),
+        "expenses": round(expenses, 2),
+        "net": round(net, 2),
+        "savings_rate": savings_rate,
+        "categories": categories,
+    }
+
+
+@router.get("/trends")
+def category_trends(
+    session: Annotated[Session, Depends(get_session)],
+    months: int = Query(6, ge=1, le=24),
+):
+    """Kategorien-Ausgaben über die letzten N Monate."""
+    today = date.today()
+    month_list: list[str] = []
+    y, m = today.year, today.month
+    for _ in range(months):
+        month_list.append(f"{y}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    month_list.reverse()
+
+    txs = session.exec(
+        select(Transaction).where(Transaction.month.in_(month_list), Transaction.amount < 0)
+    ).all()
+
+    data: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for tx in txs:
+        data[tx.category][tx.month] += abs(tx.amount)
+
+    series = [
+        {
+            "category": cat,
+            "values": [round(data[cat].get(mo, 0.0), 2) for mo in month_list],
+        }
+        for cat in sorted(data.keys())
+    ]
+
+    return {"months": month_list, "series": series}
