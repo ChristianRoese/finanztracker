@@ -315,7 +315,7 @@ function renderTxTable(txs, page) {
 
   tbody.innerHTML = slice.map(tx => {
     const color = CAT_COLORS[tx.category] || '#888';
-    const badge = `<span class="badge" style="background:${color}22;color:${color}" onclick="openCatModal(${tx.id},'${escHtml(tx.merchant)}','${tx.category}')">${tx.category}</span>`;
+    const badge = `<span class="badge" style="background:${color}22;color:${color}" onclick="openCatModal(${tx.id},'${escHtml(tx.merchant)}','${escHtml(tx.category)}')">${escHtml(tx.category)}</span>`;
     return `<tr>
       <td class="muted">${fmtDate(tx.date)}</td>
       <td>${escHtml(tx.merchant)}</td>
