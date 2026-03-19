@@ -149,11 +149,11 @@ async function loadDashboard() {
   const params = m ? `?month=${m}` : '';
 
   try {
-    const [summary, catBreakdown, allSummary] = await Promise.all([
+    const [summary, catBreakdown] = await Promise.all([
       apiFetch(`/api/transactions/summary`),
       apiFetch(`/api/transactions/categories${params}`),
-      apiFetch(`/api/transactions/summary`),
     ]);
+    const allSummary = summary;
 
     // KPIs – show dash when no data
     if (!summary.length) {

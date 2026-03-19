@@ -1,5 +1,5 @@
 // charts.js – Chart.js wrappers
-import { CAT_COLORS, fmtEur } from './app.js';
+import { apiFetch, CAT_COLORS, fmtEur } from './app.js';
 
 let barChartInst    = null;
 let donutChartInst  = null;
@@ -161,10 +161,7 @@ export async function renderTrendChart() {
 
   let data;
   try {
-    data = await fetch('/api/reports/trends?months=6').then(r => {
-      if (!r.ok) throw new Error(r.status);
-      return r.json();
-    });
+    data = await apiFetch('/api/reports/trends?months=6');
   } catch {
     data = null;
   }
