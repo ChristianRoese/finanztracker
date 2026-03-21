@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+
+# Data / DB
+data/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Docs (Claude-interne Planungsdateien)
+docs/
