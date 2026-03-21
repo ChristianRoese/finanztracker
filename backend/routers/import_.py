@@ -7,7 +7,7 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col, func
 
 from backend.database import get_session
 from backend.models.transaction import Transaction
@@ -41,6 +41,8 @@ async def import_pdf(
     try:
         parsed = parse_pdf(io.BytesIO(content), statement_label)
     except Exception as e:
+        import traceback, logging
+        logging.getLogger(__name__).error("PDF parse error: %s\n%s", e, traceback.format_exc())
         raise HTTPException(422, f"PDF konnte nicht geparst werden: {e}")
 
     if not parsed:
@@ -118,3 +120,46 @@ async def import_pdf(
         "total_in_pdf": len(parsed),
         "statement": statement_label,
     }
+
+
+@router.get("/statements")
+def list_statements(session: Annotated[Session, Depends(get_session)]):
+    """Alle importierten Auszüge mit Buchungsanzahl und Zeitraum."""
+    rows = session.exec(
+        select(
+            col(Transaction.account_statement),
+            func.count().label("tx_count"),
+            func.min(col(Transaction.date)).label("date_from"),
+            func.max(col(Transaction.date)).label("date_to"),
+            func.sum(func.iif(col(Transaction.amount) < 0, col(Transaction.amount), 0)).label("expenses"),
+            func.sum(func.iif(col(Transaction.amount) > 0, col(Transaction.amount), 0)).label("income"),
+        )
+        .group_by(col(Transaction.account_statement))
+        .order_by(func.min(col(Transaction.date)).desc())
+    ).all()
+    return [
+        {
+            "statement": r[0],
+            "tx_count": r[1],
+            "date_from": str(r[2]),
+            "date_to": str(r[3]),
+            "expenses": round(abs(r[4] or 0), 2),
+            "income": round(r[5] or 0, 2),
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/statements")
+def delete_statement(statement: str, session: Annotated[Session, Depends(get_session)]):
+    """Löscht alle Transaktionen eines Auszugs (statement als Query-Parameter)."""
+    txs = session.exec(
+        select(Transaction).where(col(Transaction.account_statement) == statement)
+    ).all()
+    if not txs:
+        raise HTTPException(404, f"Auszug '{statement}' nicht gefunden")
+    count = len(txs)
+    for tx in txs:
+        session.delete(tx)
+    session.commit()
+    return {"deleted": count, "statement": statement}

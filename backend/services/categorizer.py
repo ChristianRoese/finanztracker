@@ -29,7 +29,7 @@ RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"wertpapier|etf|depot|sparplan|msci|spdr", re.I), "Investments"),
     (re.compile(r"autohaus|tankstelle|kfz.steuer|hem\.|aral|shell|esso|parking|parkhaus", re.I), "Transport & Auto"),
     (re.compile(r"apotheke|arzt|zahnarzt|tierarzt|petfood|futterhaus|shop\s*apotheke|docmorris", re.I), "Gesundheit"),
-    (re.compile(r"besoldung|lohn|gehalt|landesamt.*finanzen", re.I), "Einnahmen"),
+    (re.compile(r"besoldung|lohn|gehalt|landesamt.*finanzen|zahlungseingang|gutschrift|erstattung|rückzahlung|überweisung.*eingang", re.I), "Einnahmen"),
     (re.compile(r"dauerauftrag|gewerkschaft|gdp|mitglied", re.I), "Sonstiges"),
 ]
 
@@ -39,9 +39,9 @@ Ordne Banktransaktionen einer der folgenden Kategorien zu:
 {chr(10).join(f"- {c}" for c in CATEGORIES)}
 
 Regeln:
-- "Einnahmen" nur für Gehalt, Lohn, Rückerstattungen und eingehende Überweisungen (positive Beträge)
-- "Investments" für ETF-Sparpläne, Wertpapierkäufe, Depot-Transaktionen
-- "Kredit & Schulden" für Kreditraten, Daueraufträge zur Schuldentilgung
+- "Einnahmen" IMMER wenn amount > 0 (positive Beträge = Geldeingang, egal von wem)
+- "Investments" für ETF-Sparpläne, Wertpapierkäufe, Depot-Transaktionen (amount < 0)
+- "Kredit & Schulden" für Kreditraten, Daueraufträge zur Schuldentilgung (amount < 0)
 - "Lieferando" für Lieferando, Domino's, Call a Pizza und ähnliche Lieferdienste
 - "Sonstiges" wenn keine andere Kategorie passt
 
@@ -49,7 +49,10 @@ Antworte NUR mit einem JSON-Array, ohne Erklärungen oder Markdown:
 [{{"id": 0, "category": "Lebensmittel"}}, {{"id": 1, "category": "Streaming"}}]"""
 
 
-def _apply_rules(merchant: str, description: str) -> Optional[str]:
+def _apply_rules(merchant: str, description: str, amount: float = 0.0) -> Optional[str]:
+    # Positive Beträge = Einnahmen (Ausnahme: Investments sind immer negativ)
+    if amount > 0:
+        return "Einnahmen"
     text = f"{merchant} {description}"
     for pattern, category in RULES:
         if pattern.search(text):
@@ -69,7 +72,7 @@ def categorize_batch(
     needs_ai: list[dict] = []
 
     for item in items:
-        rule_cat = _apply_rules(item.get("merchant", ""), item.get("description", ""))
+        rule_cat = _apply_rules(item.get("merchant", ""), item.get("description", ""), item.get("amount", 0.0))
         if rule_cat:
             result[item["id"]] = rule_cat
         else:

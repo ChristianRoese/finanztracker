@@ -67,7 +67,14 @@ export function fmtDate(s) {
 
 async function apiFetch(path, opts = {}) {
   const res = await fetch(API + path, opts);
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      const body = await res.json();
+      if (body.detail) detail = `${res.status} – ${body.detail}`;
+    } catch (_) {}
+    throw new Error(`API ${path} → ${detail}`);
+  }
   return res.json();
 }
 
@@ -298,9 +305,25 @@ async function loadTransactions() {
 
     renderTxTable(filtered, txPage);
     renderPagination(filtered.length);
+    renderTxBalance(filtered);
   } catch(e) {
     console.error('Transactions error:', e);
   }
+}
+
+function renderTxBalance(txs) {
+  const el = document.getElementById('txBalanceSummary');
+  if (!txs.length) { el.textContent = ''; return; }
+  const income  = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const expense = txs.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const balance = income + expense;
+  const sign    = balance >= 0 ? '+' : '';
+  el.innerHTML =
+    `<span class="tx-bal-income">+${fmtEur(income)}</span>` +
+    `<span class="tx-bal-sep">−</span>` +
+    `<span class="tx-bal-expense">${fmtEur(Math.abs(expense))}</span>` +
+    `<span class="tx-bal-sep">=</span>` +
+    `<span class="tx-bal-total ${balance >= 0 ? 'positive' : 'negative'}">${sign}${fmtEur(balance)}</span>`;
 }
 
 function renderTxTable(txs, page) {
@@ -407,26 +430,53 @@ document.getElementById('catModalSave').addEventListener('click', async () => {
 // ── Import history ──────────────────────────────────────
 async function loadImportHistory() {
   try {
-    const summary = await apiFetch('/api/transactions/summary');
+    const statements = await apiFetch('/api/import/statements');
     const hist = document.getElementById('importHistory');
-    if (!summary.length) {
+    if (!statements.length) {
       hist.innerHTML = '<div class="empty-state">Noch keine Auszüge importiert</div>';
       return;
     }
     hist.innerHTML = `
       <table class="data-table">
-        <thead><tr><th>Monat</th><th class="right">Ausgaben</th><th class="right">Einnahmen</th><th class="right">Transaktionen</th></tr></thead>
+        <thead><tr>
+          <th class="import-del-col"></th>
+          <th>Auszug</th>
+          <th>Zeitraum</th>
+          <th class="right">Einnahmen</th>
+          <th class="right">Ausgaben</th>
+          <th class="right">Buchungen</th>
+        </tr></thead>
         <tbody>
-          ${summary.map(s => `<tr>
-            <td>${s.month}</td>
-            <td class="right negative">−${fmtEur(s.expenses)}</td>
+          ${statements.map(s => `<tr>
+            <td class="import-del-col">
+              <button class="btn-trash" title="Auszug löschen" onclick="deleteStatement('${escHtml(s.statement)}', this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              </button>
+            </td>
+            <td class="muted" style="font-size:0.78rem">${escHtml(s.statement)}</td>
+            <td class="muted" style="font-size:0.78rem">${fmtDate(s.date_from)} – ${fmtDate(s.date_to)}</td>
             <td class="right positive">+${fmtEur(s.income)}</td>
+            <td class="right negative">−${fmtEur(s.expenses)}</td>
             <td class="right muted">${s.tx_count}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
   } catch(e) { console.error(e); }
 }
+
+window.deleteStatement = async function(statement, btn) {
+  if (!confirm(`Auszug „${statement}" und alle ${btn.closest('tr').querySelector('.right.muted').textContent} Buchungen löschen?`)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch(`/api/import/statements?statement=${encodeURIComponent(statement)}`, { method: 'DELETE' });
+    await loadImportHistory();
+    await loadDashboard();
+    await populateFilters();
+  } catch(e) {
+    alert(`Fehler: ${e.message}`);
+    btn.disabled = false;
+  }
+};
 
 // ── Init ───────────────────────────────────────────────
 async function init() {
