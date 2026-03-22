@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from collections import defaultdict
 from datetime import date
 
@@ -17,9 +17,13 @@ def monthly_report(
     year: int,
     month: int,
     session: Annotated[Session, Depends(get_session)],
+    account_id: Optional[int] = Query(None),
 ):
     month_str = f"{year}-{month:02d}"
-    txs = session.exec(select(Transaction).where(Transaction.month == month_str)).all()
+    q = select(Transaction).where(Transaction.month == month_str)
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
+    txs = session.exec(q).all()
 
     if not txs:
         return {"month": month_str, "income": 0.0, "expenses": 0.0, "net": 0.0, "savings_rate": 0.0, "categories": []}
@@ -53,6 +57,7 @@ def monthly_report(
 def category_trends(
     session: Annotated[Session, Depends(get_session)],
     months: int = Query(6, ge=1, le=24),
+    account_id: Optional[int] = Query(None),
 ):
     """Kategorien-Ausgaben über die letzten N Monate."""
     today = date.today()
@@ -66,15 +71,15 @@ def category_trends(
             y -= 1
     month_list.reverse()
 
-    rows = session.exec(
-        select(Transaction.month, Transaction.category, func.sum(func.abs(Transaction.amount)))
-        .where(
-            Transaction.month.in_(month_list),
-            Transaction.amount < 0,
-            Transaction.category != "Einnahmen",
-        )
-        .group_by(Transaction.month, Transaction.category)
-    ).all()
+    q = select(Transaction.month, Transaction.category, func.sum(func.abs(Transaction.amount))).where(
+        Transaction.month.in_(month_list),
+        Transaction.amount < 0,
+        Transaction.category != "Einnahmen",
+    )
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
+    q = q.group_by(Transaction.month, Transaction.category)
+    rows = session.exec(q).all()
 
     data: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for month_val, category, total in rows:

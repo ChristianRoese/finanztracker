@@ -1,10 +1,11 @@
 // charts.js – Chart.js wrappers
 import { apiFetch, CAT_COLORS, fmtEur } from './app.js';
 
-let barChartInst    = null;
-let donutChartInst  = null;
-let trendChartInst  = null;
-let etfHistoryInst  = null;
+let barChartInst      = null;
+let donutChartInst    = null;
+let trendChartInst    = null;
+let etfHistoryInst    = null;
+let etfForecastInst   = null;
 
 const CHART_DEFAULTS = {
   backgroundColor: '#1a1e28',
@@ -153,7 +154,7 @@ export function renderDonutChart(catBreakdown) {
   });
 }
 
-export async function renderTrendChart() {
+export async function renderTrendChart(accountId = null) {
   const ctx = document.getElementById('trendChart');
   if (!ctx) return;
 
@@ -161,7 +162,9 @@ export async function renderTrendChart() {
 
   let data;
   try {
-    data = await apiFetch('/api/reports/trends?months=6');
+    const params = new URLSearchParams({ months: 6 });
+    if (accountId != null) params.set('account_id', accountId);
+    data = await apiFetch(`/api/reports/trends?${params}`);
   } catch {
     data = null;
   }
@@ -233,6 +236,84 @@ export async function renderTrendChart() {
       scales: {
         x: { ...axisStyle(), grid: { display: false } },
         y: { ...axisStyle(), ticks: { ...axisStyle().ticks, callback: v => v + '€' } },
+      },
+    },
+  });
+}
+
+export function renderEtfForecastChart(aggregate) {
+  const ctx = document.getElementById('etfForecastChart');
+  if (!ctx) return;
+
+  const years = [0, 1, 2, 3, 4, 5];
+  const currentVal = aggregate.current_value;
+  const sc = aggregate.scenarios;
+
+  const mkData = (key) => [currentVal, ...sc[key]];
+
+  if (etfForecastInst) etfForecastInst.destroy();
+  etfForecastInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Heute', 'Jahr 1', 'Jahr 2', 'Jahr 3', 'Jahr 4', 'Jahr 5'],
+      datasets: [
+        {
+          label: 'Best (10%)',
+          data: mkData('best'),
+          borderColor: '#4ade80',
+          backgroundColor: 'rgba(74,222,128,0.08)',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#4ade80',
+          tension: 0.2,
+          fill: false,
+        },
+        {
+          label: 'Casual (7%)',
+          data: mkData('casual'),
+          borderColor: '#22d3ee',
+          backgroundColor: 'rgba(34,211,238,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#22d3ee',
+          tension: 0.2,
+          fill: false,
+        },
+        {
+          label: 'Worst (3%)',
+          data: mkData('worst'),
+          borderColor: '#f87171',
+          backgroundColor: 'rgba(248,113,113,0.06)',
+          borderWidth: 2,
+          borderDash: [6, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#f87171',
+          tension: 0.2,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { color: '#6b7280', font: { family: 'DM Mono', size: 10 }, boxWidth: 10, padding: 14 },
+        },
+        tooltip: {
+          ...tooltipPlugin(),
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtEur(ctx.parsed.y)}` },
+        },
+      },
+      scales: {
+        x: { ...axisStyle(), grid: { display: false } },
+        y: { ...axisStyle(), ticks: { ...axisStyle().ticks, callback: v => {
+          if (v >= 1000) return (v / 1000).toFixed(0) + 'k €';
+          return v + '€';
+        }}},
       },
     },
   });

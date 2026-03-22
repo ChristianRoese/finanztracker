@@ -1,9 +1,9 @@
 // etf.js – ETF Portfolio View
 import { apiFetch, fmtEur, fmtDate, makeEmptyState } from './app.js';
-import { renderEtfHistoryChart } from './charts.js';
+import { renderEtfHistoryChart, renderEtfForecastChart } from './charts.js';
 
 export async function loadEtfView() {
-  await Promise.all([loadEtfPositions(), loadEtfPurchases()]);
+  await Promise.all([loadEtfPositions(), loadEtfPurchases(), loadEtfForecast()]);
 
   // Add position form (attach once)
   const form = document.getElementById('etfAddForm');
@@ -30,9 +30,9 @@ export async function loadEtfView() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isin, name, wkn: wkn || undefined, ticker: ticker || undefined, monthly_amount: amount }),
         });
-        // Reset form
         form.reset();
         await loadEtfPositions();
+        await loadEtfForecast();
       } catch(err) {
         errEl.textContent = err.message.includes('409') || err.message.includes('400')
           ? 'ISIN existiert bereits oder ungültige Eingabe.'
@@ -52,6 +52,7 @@ export async function loadEtfView() {
     try {
       const res = await apiFetch('/api/etf/refresh-prices', { method: 'POST' });
       await loadEtfPositions();
+      await loadEtfForecast();
       btn.textContent = `✓ ${res.count} Preise aktualisiert`;
     } catch(e) {
       btn.textContent = 'Fehler – erneut versuchen';
@@ -88,6 +89,19 @@ async function loadEtfPositions() {
     container.innerHTML = positions.map(p => {
       const gainColor = p.gain_eur >= 0 ? 'var(--green)' : 'var(--red)';
       const gainSign  = p.gain_eur >= 0 ? '+' : '';
+
+      let cagrHtml = '';
+      if (p.yearly_return_cagr != null) {
+        const cagrColor = p.yearly_return_cagr >= 0 ? 'var(--green)' : 'var(--red)';
+        const cagrSign  = p.yearly_return_cagr >= 0 ? '+' : '';
+        const yearsLabel = p.years_held != null ? `${p.years_held.toFixed(1)} J.` : '';
+        cagrHtml = `
+          <div class="etf-meta-item">
+            <div class="etf-meta-label">CAGR p.a. (${yearsLabel})</div>
+            <div class="etf-meta-value" style="color:${cagrColor}">${cagrSign}${p.yearly_return_cagr.toFixed(2)}%</div>
+          </div>`;
+      }
+
       return `
         <div class="etf-position">
           <div class="etf-pos-header">
@@ -128,6 +142,7 @@ async function loadEtfPositions() {
               <div class="etf-meta-label">Sparplan / Mo.</div>
               <div class="etf-meta-value">${fmtEur(p.monthly_amount)}</div>
             </div>
+            ${cagrHtml}
             <div class="etf-meta-item">
               <div class="etf-meta-label">Kurs stand</div>
               <div class="etf-meta-value" style="color:var(--muted);font-size:0.65rem">${p.price_updated ? new Date(p.price_updated).toLocaleDateString('de-DE') : '–'}</div>
@@ -139,6 +154,39 @@ async function loadEtfPositions() {
 
   } catch(e) {
     console.error('ETF positions error:', e);
+  }
+}
+
+async function loadEtfForecast() {
+  try {
+    const data = await apiFetch('/api/etf/forecast');
+    const card = document.getElementById('etfForecastCard');
+
+    if (!data || !data.aggregate || data.aggregate.current_value === 0) {
+      if (card) card.style.display = 'none';
+      return;
+    }
+    if (card) card.style.display = '';
+
+    renderEtfForecastChart(data.aggregate);
+
+    // Fill table
+    const tbody = document.getElementById('etfForecastBody');
+    const { scenarios } = data.aggregate;
+    tbody.innerHTML = data.years.map((yr, i) => {
+      const best   = scenarios.best[i];
+      const casual = scenarios.casual[i];
+      const worst  = scenarios.worst[i];
+      return `<tr>
+        <td>Jahr ${yr}</td>
+        <td class="right" style="color:var(--green)">${fmtEur(best)}</td>
+        <td class="right" style="color:var(--accent2)">${fmtEur(casual)}</td>
+        <td class="right" style="color:var(--red)">${fmtEur(worst)}</td>
+      </tr>`;
+    }).join('');
+
+  } catch(e) {
+    console.error('ETF forecast error:', e);
   }
 }
 

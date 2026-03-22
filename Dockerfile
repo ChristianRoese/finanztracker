@@ -2,18 +2,20 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps for pdfplumber
+# System dependencies for pdfplumber (poppler)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpoppler-cpp-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application code
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-# Data directory for SQLite (will be volume-mounted)
+# Create data directory
 RUN mkdir -p /data
 
 EXPOSE 8080

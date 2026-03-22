@@ -1,7 +1,7 @@
 // import.js – PDF Upload & Drag-Drop
 import { apiFetch } from './app.js';
 
-export function initImport(onImportDone, onHistoryLoad) {
+export function initImport(onImportDone, onHistoryLoad, onAccountsChanged) {
   const zone      = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
   const queue     = document.getElementById('importQueue');
@@ -30,6 +30,7 @@ export function initImport(onImportDone, onHistoryLoad) {
     resultBox.style.display = 'none';
     queue.innerHTML = '';
 
+    const accountName = (document.getElementById('importAccountName')?.value || '').trim();
     const results = [];
 
     for (const file of files) {
@@ -50,8 +51,15 @@ export function initImport(onImportDone, onHistoryLoad) {
       try {
         const fd = new FormData();
         fd.append('file', file);
+        if (accountName) fd.append('account_name', accountName);
         const res = await apiFetch('/api/import/pdf', { method: 'POST', body: fd });
-        statusEl.textContent = `✓ ${res.imported} importiert, ${res.skipped} übersprungen`;
+
+        let statusText = `✓ ${res.imported} importiert, ${res.skipped} übersprungen`;
+        if (res.account_name) {
+          const ibanHint = res.iban ? ` (${res.iban.slice(0, 8)}…)` : '';
+          statusText += ` · Konto: ${res.account_name}${ibanHint}`;
+        }
+        statusEl.textContent = statusText;
         statusEl.className = 'import-item-status success';
         results.push({ file: file.name, ...res, ok: true });
       } catch(e) {
@@ -99,14 +107,17 @@ export function initImport(onImportDone, onHistoryLoad) {
     });
     resultContent.appendChild(grid);
 
-    // Per-file account statement labels
-    const labeled = okResults.filter(r => r.account_statement);
+    // Per-file account info
+    const labeled = okResults.filter(r => r.account_name || r.account_statement);
     if (labeled.length) {
       const labelList = document.createElement('div');
       labelList.style.cssText = 'margin-top:0.75rem;font-size:0.72rem;color:var(--muted)';
       labeled.forEach(r => {
         const row = document.createElement('div');
-        row.textContent = `${r.file} → Auszug ${r.account_statement}`;
+        const acctInfo = r.account_name
+          ? `Konto: ${r.account_name}${r.iban ? ' · ' + r.iban : ''}`
+          : `Auszug: ${r.account_statement}`;
+        row.textContent = `${r.file} → ${acctInfo}`;
         labelList.appendChild(row);
       });
       resultContent.appendChild(labelList);
@@ -117,6 +128,7 @@ export function initImport(onImportDone, onHistoryLoad) {
     if (totalImported > 0) {
       onImportDone();
       onHistoryLoad();
+      if (onAccountsChanged) onAccountsChanged();
     }
   }
 }

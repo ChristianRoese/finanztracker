@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.database import create_db_and_tables
-from backend.routers import import_, transactions, etf, reports
+from backend.models import account as _account_models  # noqa: F401 – registers BankAccount table
+from backend.routers import import_, transactions, etf, reports, accounts
 from backend.services.scheduler import start_scheduler
 
 
@@ -32,6 +33,7 @@ app.include_router(import_.router)
 app.include_router(transactions.router)
 app.include_router(etf.router)
 app.include_router(reports.router)
+app.include_router(accounts.router)
 
 
 @app.get("/health")

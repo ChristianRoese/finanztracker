@@ -25,9 +25,12 @@ export const CAT_COLORS = {
 let months = [];
 let currentMonthIdx = -1;  // -1 = all
 let allCategories = [];
+let allAccounts = [];
+let selectedAccountId = null;  // null = all accounts
 let txPage = 0;
 const TX_PAGE_SIZE = 50;
 let editingTxId = null;
+let editingAccountId = null;
 let allTransactions = [];
 
 // ── Utils ──────────────────────────────────────────────
@@ -109,10 +112,50 @@ async function checkApi() {
   }
 }
 
+// ── Accounts ───────────────────────────────────────────
+async function loadAccounts() {
+  try {
+    allAccounts = await apiFetch('/api/accounts');
+  } catch { allAccounts = []; }
+  populateAccountDropdowns();
+}
+
+function populateAccountDropdowns() {
+  ['dashAccountFilter', 'txAccountFilter'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    // Keep only the "Alle Konten" option
+    while (sel.options.length > 1) sel.remove(1);
+    allAccounts.forEach(a => {
+      const opt = new Option(a.name || a.iban || `Konto ${a.id}`, a.id);
+      sel.appendChild(opt);
+    });
+    sel.value = prev;
+  });
+}
+
+document.getElementById('dashAccountFilter').addEventListener('change', e => {
+  selectedAccountId = e.target.value ? parseInt(e.target.value) : null;
+  // Sync the other dropdown
+  const txSel = document.getElementById('txAccountFilter');
+  if (txSel) txSel.value = e.target.value;
+  loadMonths().then(() => loadDashboard());
+});
+
+document.getElementById('txAccountFilter').addEventListener('change', e => {
+  selectedAccountId = e.target.value ? parseInt(e.target.value) : null;
+  const dashSel = document.getElementById('dashAccountFilter');
+  if (dashSel) dashSel.value = e.target.value;
+  txPage = 0;
+  loadTransactions();
+});
+
 // ── Month navigation ───────────────────────────────────
 async function loadMonths() {
   try {
-    months = await apiFetch('/api/transactions/months');
+    const params = selectedAccountId != null ? `?account_id=${selectedAccountId}` : '';
+    months = await apiFetch(`/api/transactions/months${params}`);
   } catch { months = []; }
   updateMonthLabel();
 }
@@ -153,11 +196,14 @@ document.getElementById('monthAll').addEventListener('click', () => {
 // ── Dashboard ──────────────────────────────────────────
 async function loadDashboard() {
   const m = currentMonth();
-  const params = m ? `?month=${m}` : '';
+  const qp = new URLSearchParams();
+  if (m) qp.set('month', m);
+  if (selectedAccountId != null) qp.set('account_id', selectedAccountId);
+  const params = qp.toString() ? `?${qp}` : '';
 
   try {
     const [summary, catBreakdown] = await Promise.all([
-      apiFetch(`/api/transactions/summary`),
+      apiFetch(`/api/transactions/summary${selectedAccountId != null ? `?account_id=${selectedAccountId}` : ''}`),
       apiFetch(`/api/transactions/categories${params}`),
     ]);
     const allSummary = summary;
@@ -262,7 +308,7 @@ async function loadDashboard() {
     // Charts
     renderBarChart(allSummary);
     renderDonutChart(expCats);
-    renderTrendChart();
+    renderTrendChart(selectedAccountId);
 
     // Donut legend
     const legend = document.getElementById('donutLegend');
@@ -292,6 +338,7 @@ async function loadTransactions() {
     const params = new URLSearchParams({ limit: 1000 });
     if (month) params.set('month', month);
     if (cat)   params.set('category', cat);
+    if (selectedAccountId != null) params.set('account_id', selectedAccountId);
 
     allTransactions = await apiFetch(`/api/transactions?${params}`);
 
@@ -378,6 +425,7 @@ async function populateFilters() {
       apiFetch('/api/transactions/months'),
       apiFetch('/api/transactions/categories/list'),
     ]);
+
     allCategories = cats;
 
     const monthSel = document.getElementById('txFilterMonth');
@@ -427,8 +475,80 @@ document.getElementById('catModalSave').addEventListener('click', async () => {
   } catch(e) { alert('Fehler beim Speichern: ' + e.message); }
 });
 
+// ── Account list (Import-Tab) ───────────────────────────
+async function loadAccountList() {
+  try {
+    const accounts = await apiFetch('/api/accounts');
+    const container = document.getElementById('accountList');
+    if (!accounts.length) {
+      container.innerHTML = '<div class="empty-state">Noch keine Konten angelegt. IBAN wird beim PDF-Import automatisch erkannt.</div>';
+      return;
+    }
+    container.innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>Name</th><th>IBAN</th><th class="right">Buchungen</th><th>Zeitraum</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${accounts.map(a => `<tr>
+            <td><strong>${escHtml(a.name)}</strong></td>
+            <td class="muted" style="font-size:0.78rem;font-family:'DM Mono',monospace">${escHtml(a.iban || '–')}</td>
+            <td class="right muted">${a.tx_count}</td>
+            <td class="muted" style="font-size:0.78rem">${a.date_from ? fmtDate(a.date_from) + ' – ' + fmtDate(a.date_to) : '–'}</td>
+            <td class="action-cell">
+              <button class="btn-secondary btn-xs" onclick="openAccountModal(${a.id},'${escHtml(a.name)}')">Umbenennen</button>
+              <button class="btn-trash" title="Konto löschen" onclick="deleteAccount(${a.id},'${escHtml(a.name)}',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              </button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { console.error(e); }
+}
+
+window.openAccountModal = function(id, currentName) {
+  editingAccountId = id;
+  document.getElementById('accountModalName').value = currentName;
+  document.getElementById('accountModal').style.display = 'flex';
+};
+
+document.getElementById('accountModalClose').addEventListener('click', () => document.getElementById('accountModal').style.display = 'none');
+document.getElementById('accountModalCancel').addEventListener('click', () => document.getElementById('accountModal').style.display = 'none');
+
+document.getElementById('accountModalSave').addEventListener('click', async () => {
+  const name = document.getElementById('accountModalName').value.trim();
+  if (!name) return;
+  try {
+    await apiFetch(`/api/accounts/${editingAccountId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    document.getElementById('accountModal').style.display = 'none';
+    await loadAccountList();
+    await loadAccounts();
+  } catch(e) { alert('Fehler: ' + e.message); }
+});
+
+window.deleteAccount = async function(id, name, btn) {
+  if (!confirm(`Konto „${name}" und alle zugehörigen Transaktionen löschen?`)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    await loadAccountList();
+    await loadAccounts();
+    await loadDashboard();
+    await populateFilters();
+  } catch(e) {
+    alert(`Fehler: ${e.message}`);
+    btn.disabled = false;
+  }
+};
+
 // ── Import history ──────────────────────────────────────
 async function loadImportHistory() {
+  await loadAccountList();
   try {
     const statements = await apiFetch('/api/import/statements');
     const hist = document.getElementById('importHistory');
@@ -481,8 +601,9 @@ window.deleteStatement = async function(statement, btn) {
 // ── Init ───────────────────────────────────────────────
 async function init() {
   initCharts();
-  initImport(loadDashboard, loadImportHistory);
+  initImport(loadDashboard, loadImportHistory, loadAccounts);
   await checkApi();
+  await loadAccounts();
   await loadMonths();
   await populateFilters();
   await loadDashboard();
