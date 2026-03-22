@@ -184,13 +184,26 @@ CORS_ORIGINS=http://localhost:3000,http://192.168.x.x:8080
 - Restart: `unless-stopped`
 
 ## ETF-Erweiterung
-Neue ISINs in `backend/services/etf_service.py` → `ISIN_TO_TICKER` dict eintragen. Ticker auf justetf.com oder Yahoo Finance finden.
+Neue ISINs in `backend/services/etf_service.py` in drei Dicts eintragen:
+- `ISIN_TO_TICKER` – Yahoo Finance Ticker (bevorzugt `.DE` für EUR-Kurs)
+- `ISIN_TO_NAME` – Anzeigename (NIEMALS aus PDF-Rohbeschreibung nehmen)
+- `ISIN_ALIAS` – falls alte ISIN auf neue umgeleitet werden soll
+
+**Preisabfrage**: ISIN → `ISIN_TO_TICKER` → Yahoo Finance Chart-API → Preis + Währung. Falls USD: live Umrechnung via `USDEUR=X`. finanzen.net blockiert mit 403 und ist nicht nutzbar.
+
+**fully_sold**: ETFPosition hat `fully_sold: bool` – wird nach jedem PDF-Import automatisch gesetzt wenn Net-Shares ≤ 0.001. Positionen mit `fully_sold=True` werden aus Portfolio, Preis-Refresh und Forecast ausgeblendet.
 
 ## Coding-Pitfalls (aus Code Review)
 - **`col()` zwingend**: `col(Model.field).desc()` — ohne `col()` gibt es einen RuntimeError
 - **SQL-Aggregation bevorzugen**: `func.sum()` + `group_by()` statt Python-side defaultdict
 - **Frontend XSS**: `escHtml()` auch in `onclick`-Attributen, nicht nur im sichtbaren Text
 - **APScheduler**: eigene `Session(engine)` im Job öffnen, nie Request-Session weitergeben
+
+## Regex-Pattern Hinweise (Kategorisierung)
+- DKB schreibt Merchant-Namen mit Punkten: `Coffee.Fellows`, `Hai.Asia` → Patterns brauchen `[\s.]`
+- SumUp-Transaktionen: Merchant nach `SUMUP...` → `sumup.*kaf`, `sumup.*asia` etc.
+- Apple.com.de → Streaming (Subscriptions), nicht Amazon
+- Audible, Kindle → Streaming
 
 ## Bekannte DKB-Eigenheiten
 - Wertpapierabrechnungen tauchen als reguläre Buchungen auf → via "Wertpapierabrechnung" im Text erkennen und als ETF-Kauf importieren

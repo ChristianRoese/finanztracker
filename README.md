@@ -6,7 +6,7 @@ Persönliches Finanz-Tracking für DKB-Kontoauszüge mit ETF-Portfolio-Tracking 
 - **Backend**: FastAPI + SQLModel (SQLite)
 - **PDF-Parsing**: pdfplumber
 - **Kategorisierung**: Claude Haiku API (regelbasiert + KI-Fallback)
-- **ETF-Preise**: yfinance
+- **ETF-Preise**: Yahoo Finance (ISIN-basiert via ISIN → Ticker → `.DE` Börse, immer EUR)
 - **Frontend**: Vanilla HTML/CSS/JS (kein Build-Step)
 - **Deployment**: Docker + docker-compose
 
@@ -32,7 +32,7 @@ CORS_ORIGINS=http://localhost:8080,http://192.168.1.100:8080
 ### 2. Docker starten
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
 Dashboard erreichbar unter: **http://localhost:8080**
@@ -97,34 +97,48 @@ uvicorn backend.main:app --reload --port 8080
 
 | Kategorie | Beispiele |
 |---|---|
-| Lebensmittel | Globus, ALDI, Rewe, Biomarkt |
+| Lebensmittel | Globus, ALDI, Rewe, Biomarkt, Bäckereien, Rossmann |
 | Lieferando | Lieferando, Domino's, Call a Pizza |
-| Restaurant/Café | Coffee Fellows, Döner, McDonald's |
+| Restaurant/Café | Coffee Fellows, Döner, McDonald's, Starbucks, Al Porto |
 | Amazon | Amazon, AMZN |
-| Streaming | Netflix, Spotify, Disney+, Crunchyroll |
-| Gaming | Blizzard, Steam, G2A, CCP Games |
+| Streaming | Netflix, Spotify, Disney+, Audible, Kindle, Apple.com.de |
+| Gaming | Blizzard, Steam, G2A, CCP Games, Warhammer |
 | Versicherung | Signal Iduna, HUK-Coburg, Cosmos |
-| Kredit & Schulden | Kreditabzahlung, Santander KFZ |
-| Investments | ETF-Sparpläne, Wertpapierabrechnungen |
-| Transport & Auto | Tankstelle, KFZ-Steuer, Autohaus |
-| Gesundheit | Apotheke, Shop Apotheke, Petfood |
+| Kredit & Schulden | Kreditabzahlung, Santander, Consors Finanz |
+| Investments | ETF-Sparpläne, Wertpapierabrechnungen, Trade Republic |
+| Transport & Auto | Tankstelle, KFZ-Steuer, Agip, Warnowtunnel, Flughafen |
+| Gesundheit | Apotheke, Klinik-Service, Fielmann, Reha |
 | Sonstiges | Alles andere |
 | Einnahmen | Gehalt, Rückerstattungen |
 
 ---
 
-## ETF ISIN → Ticker Mapping
+## ETF-Positionen
 
-Bekannte ETFs sind in `backend/services/etf_service.py` vorkonfiguriert:
+Aktive Positionen (Stand März 2026):
 
-```python
-ISIN_TO_TICKER = {
-    "IE00BK1PV551": "XDWD.DE",   # Xtrackers MSCI World 1D
-    "IE00B3YLTY66": "SPYW.DE",   # SPDR MSCI ACWI IMI
-}
-```
+| ISIN | Name | Ticker |
+|---|---|---|
+| IE00BK1PV551 | Xtrackers MSCI World 1D | XDWD.DE (via XDWL.L, USD→EUR) |
+| IE00B3YLTY66 | SPDR MSCI ACWI IMI | SPYI.DE |
 
-Neue ETFs einfach ergänzen. Ticker findest du auf justetf.com oder Yahoo Finance.
+**Hinweis SPYI Split**: 25:1 Split am 23.02.2026 – alle Käufe vor diesem Datum wurden angepasst.
+
+Neue ISINs eintragen in `backend/services/etf_service.py`:
+- `ISIN_TO_TICKER` – Ticker für Preisabfrage
+- `ISIN_TO_NAME` – Anzeigename
+- `ISIN_ALIAS` – falls alte ISIN auf neue umgeleitet werden soll (z.B. Fondsfusion)
+
+ETFs mit `fully_sold=True` werden aus dem Portfolio ausgeblendet. Wird nach jedem Import automatisch gesetzt wenn Net-Shares ≤ 0.
+
+---
+
+## Preisabfrage (ETF)
+
+Ablauf:
+1. `ISIN_TO_TICKER` Mapping → Ticker (z.B. `XDWL.L`)
+2. Yahoo Finance Chart-API → Preis + Währung
+3. Wenn Währung ≠ EUR: automatische Umrechnung via `USDEUR=X` (live)
 
 ---
 
@@ -136,12 +150,15 @@ Swagger UI: **http://localhost:8080/docs**
 
 ```
 POST /api/import/pdf              – PDF hochladen & importieren
-GET  /api/transactions            – Transaktionsliste (filter: month, category)
+GET  /api/transactions            – Transaktionsliste (filter: month, category, account_id)
 PUT  /api/transactions/{id}/category – Kategorie manuell setzen
 GET  /api/transactions/summary    – Monatliche Zusammenfassung
 GET  /api/transactions/categories – Kategorie-Breakdown
 GET  /api/etf/positions           – Portfolio mit aktuellem Wert
-POST /api/etf/refresh-prices      – Preise via yfinance aktualisieren
+POST /api/etf/refresh-prices      – Preise via Yahoo Finance (ISIN-basiert) aktualisieren
+GET  /api/etf/forecast            – 5-Jahres-Prognose (Best/Casual/Worst)
+GET  /api/reports/monthly/{year}/{month} – Monatsbericht
+GET  /api/reports/trends          – Kategorien-Trends (12 Monate)
 ```
 
 ---
@@ -155,22 +172,24 @@ finanztracker/
 │   ├── database.py          # SQLite Engine
 │   ├── models/
 │   │   ├── transaction.py   # Transaction SQLModel
-│   │   └── etf.py           # ETFPosition, ETFPurchase, ETFPrice
+│   │   ├── etf.py           # ETFPosition, ETFPurchase, ETFPrice
+│   │   └── account.py       # BankAccount SQLModel
 │   ├── routers/
-│   │   ├── import_.py       # PDF Upload & Parse
+│   │   ├── import_.py       # PDF Upload & Parse + fully_sold Auto-Update
 │   │   ├── transactions.py  # CRUD + Filter + Summary
+│   │   ├── reports.py       # Monatsberichte + Trends
 │   │   └── etf.py           # Portfolio & Preise
 │   └── services/
 │       ├── pdf_parser.py    # DKB PDF → ParsedTransaction
 │       ├── categorizer.py   # Regelbasiert + Claude Haiku
-│       └── etf_service.py   # yfinance + Portfolio-Berechnung
+│       └── etf_service.py   # Yahoo Finance + Portfolio-Berechnung
 ├── frontend/
 │   ├── index.html           # SPA
 │   └── static/
 │       ├── css/style.css
 │       └── js/
-│           ├── app.js       # Navigation + Dashboard + Tx
-│           ├── charts.js    # Chart.js Wrappers
+│           ├── app.js       # Navigation + Dashboard + Tx (sortierbare Spalten)
+│           ├── charts.js    # Chart.js Wrappers (filterabhängiger Monatsvergleich)
 │           ├── import.js    # Drag & Drop Upload
 │           └── etf.js       # ETF Portfolio View
 ├── data/                    # SQLite DB (gitignored)

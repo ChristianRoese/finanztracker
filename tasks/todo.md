@@ -1,59 +1,70 @@
 # Finanztracker – Task Board
 
-## Status: Sprint 3 aktiv
+_Stand: März 2026_
 
 ---
 
 ## ✅ Erledigt
 
-### Sprint 1 – Foundation
-- [x] **S1-01** `requirements.txt` + `Dockerfile` + `docker-compose.yml` erstellen
-- [x] **S1-02** FastAPI app skeleton (`main.py`) mit Health-Endpoint
-- [x] **S1-03** SQLite DB-Setup via SQLModel (`database.py`)
-- [x] **S1-04** Transaction-Modell + Migration (`models/transaction.py`)
-- [x] **S1-05** DKB PDF-Parser implementieren (`services/pdf_parser.py`)
-- [x] **S1-06** Import-Router (`routers/import_.py`) – POST /api/import/pdf
-- [x] **S1-07** Kategorisierungs-Service (`services/categorizer.py`)
-- [x] **S1-08** Transactions-Router – GET /api/transactions + /api/transactions/summary
-- [x] **S1-09** Frontend Grundgerüst (index.html + style.css)
-- [x] **S1-10** Frontend: PDF-Upload UI mit Drag & Drop
-- [x] **S1-11** Frontend: Dashboard-Charts (Monatsvergleich, Donut)
-- [x] **S1-12** Frontend: Transaktionsliste mit Filter + manuelle Kategorie-Änderung
-- [x] **S1-13** Docker-Build testen + README mit Setup-Anleitung
+### Foundation
+- [x] FastAPI + SQLModel + Docker Setup
+- [x] DKB PDF-Parser (text-basiert, mehrzeilig, Seitenumbrüche)
+- [x] Import-Router: PDF → Parse → Kategorisieren → Speichern
+- [x] Duplikat-Erkennung via import_hash (SHA256)
+- [x] Transaktionen CRUD + Filter (Monat, Kategorie, Konto)
+- [x] Monatsbericht + Kategorien-Trends Endpoints
+- [x] Multi-Account Support (IBAN-Erkennung aus PDF)
 
-### Sprint 2 – ETF Portfolio Tracking
-- [x] **S2-01** ETFPosition + ETFPurchase + ETFPrice Modelle
-- [x] **S2-02** ETF-Service: yfinance Preis-Fetching (ISIN → Ticker-Mapping)
-- [x] **S2-03** Wertpapierabrechnungen aus PDF-Import automatisch als ETF-Käufe erkennen
-- [x] **S2-04** ETF-Router: Positionen, Performance, Preise refreshen
-- [x] **S2-05** Frontend: ETF-Portfolio Tab (Gesamtwert, Performance, Kaufhistorie, Position hinzufügen)
-- [x] **S2-06** Hintergrund-Job: täglicher Preis-Refresh (APScheduler)
+### ETF Portfolio
+- [x] ETFPosition + ETFPurchase + ETFPrice Modelle
+- [x] Wertpapierabrechnungen aus PDF automatisch als ETF-Käufe erkennen
+- [x] ETF-Namen aus `ISIN_TO_NAME` Mapping (nicht aus PDF-Rohtext)
+- [x] `ISIN_ALIAS` für Fonds-Umbenennungen (alte ISIN → neue ISIN)
+- [x] `fully_sold` Flag: automatisch nach Import setzen wenn Net-Shares ≤ 0
+- [x] Preisabfrage via Yahoo Finance (ISIN-basiert, immer EUR, USD→EUR live-Umrechnung)
+- [x] SPYI Split 25:1 vom 23.02.2026 angewendet
+- [x] Portfolio-Summary, CAGR, 5-Jahres-Prognose (Best/Casual/Worst)
 
-### Sprint 3 – Reports & Komfort (teilweise)
-- [x] **S3-01** Monatsbericht-Endpoint (`GET /api/reports/monthly/{year}/{month}`)
-- [x] **S3-02** Kategorien-Trends (`GET /api/reports/trends`)
-- [x] **S3-03** Duplikat-Erkennung beim PDF-Import (via `import_hash` SHA256)
+### Frontend
+- [x] Dashboard: KPIs, Kategorie-Balken, Donut, Monatsvergleich, Trend
+- [x] Jahr/Monat-Filter: Monat nur aktiv wenn Jahr gewählt
+- [x] Monatsvergleich zentriert auf gewählten Monat (nicht immer letzte 6)
+- [x] ETF-Portfolio Tab
+- [x] Import Tab mit Drag & Drop
+- [x] Transaktionen: sortierbare Spalten (Datum, Händler, Kategorie, Betrag)
+- [x] Transaktionsliste: Pagination, Suche, manuelle Kategorie-Änderung
 
----
-
-## 📋 Sprint 3 – Reports & Komfort (offen)
-
-- [ ] **S3-04** Manuelle Transaktionen hinzufügen (Formular)
-- [ ] **S3-05** Kategorie-Regeln (z.B. "Globus" → immer "Lebensmittel") persistent speichern
-- [ ] **S3-06** CSV-Export
-- [ ] **S3-07** Spar-Tipps: automatische Anomalie-Erkennung (Monat X deutlich höher als Ø)
+### Kategorisierung
+- [x] Regelbasierte Regex-Patterns (Vorfilter vor API-Call)
+- [x] Erweiterung der Regex-Patterns (März 2026): Bäckereien, Audible, Kindle, Apple.com.de, Agip, Warnowtunnel, Al Porto, Asian Ways, Starbucks, Klinik-Service, Fielmann, Trade Republic, SumUp-Cafés, Warhammer u.v.m.
+- [x] Claude Haiku Batch-Kategorisierung (Fallback für unbekannte Merchants)
 
 ---
 
-## 💡 Backlog / Ideen
+## 📋 Offen / Nächste Schritte
 
-- Unterstützung weiterer Banken (Sparkasse, ING) via konfigurierbarem Parser
-- Budget-Ziele pro Kategorie mit Ampel-Anzeige
-- Obsidian-Integration: Monatsbericht als Markdown-Note exportieren
-- Telegram-Bot: monatliche Push-Zusammenfassung
-- Mehrere Konten / Depots verwalten
+### Dringend
+- [ ] **Haiku Re-Kategorisierung**: Nach Aufladen des API-Guthabens alle 560 "Sonstiges"-Transaktionen nochmal durch Haiku laufen lassen
+- [ ] **ETF-Daten**: Verkäufe aus Q4 2025 nachtragen (IE00BK1PV551 – genaue Daten aus Broker-App holen)
+- [ ] **ETF-Daten**: Fehlende März-Sparpläne prüfen (250€ XDWD + 50€ SPYI)
+
+### Features
+- [ ] Manuelle Transaktionen hinzufügen (Formular)
+- [ ] Kategorie-Regeln persistent speichern (DB statt nur Code)
+- [ ] CSV-Export
+- [ ] Spar-Tipps: Anomalie-Erkennung (Monat X deutlich höher als Ø)
+
+### Backlog
+- [ ] Weitere Banken (Sparkasse, ING) via konfigurierbarem Parser
+- [ ] Budget-Ziele pro Kategorie mit Ampel
+- [ ] Telegram-Bot: monatliche Push-Zusammenfassung
+- [ ] Obsidian-Integration: Monatsbericht als Markdown exportieren
 
 ---
 
-## 🐛 Bugs
-_(noch keine)_
+## 🐛 Bekannte Eigenheiten
+
+- DKB schreibt Merchant-Namen mit Punkten statt Leerzeichen (`Coffee.Fellows`) – Regex-Patterns müssen `[\s.]` nutzen
+- SumUp-Transaktionen: eigentlicher Merchant steht nach `SUMUP...`
+- finanzen.net blockiert Scraping (403) – nicht nutzbar als Preisquelle
+- Yahoo Finance Search gibt für IE00BK1PV551 nur `XDWL.L` (USD) zurück, kein `.DE` Ticker → Umrechnung nötig
