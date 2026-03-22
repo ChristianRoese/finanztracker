@@ -5,7 +5,7 @@ from sqlmodel import Session, col, select
 
 from backend.database import get_session
 from backend.models.etf import ETFPosition, ETFPurchase
-from backend.services.etf_service import get_portfolio_summary, refresh_all_prices
+from backend.services.etf_service import get_etf_forecast, get_portfolio_summary, refresh_all_prices
 
 router = APIRouter(prefix="/api/etf", tags=["etf"])
 
@@ -48,3 +48,9 @@ def get_purchases(session: SessionDep) -> list[ETFPurchase]:
         select(ETFPurchase).order_by(col(ETFPurchase.date).desc())
     ).all()
     return list(purchases)
+
+
+@router.get("/forecast")
+def get_forecast(session: SessionDep) -> dict:
+    """5-Jahres-Prognose für alle ETF-Positionen (Best/Casual/Worst)."""
+    return get_etf_forecast(session)

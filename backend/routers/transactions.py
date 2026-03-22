@@ -14,6 +14,7 @@ def list_transactions(
     session: Annotated[Session, Depends(get_session)],
     month: Optional[str] = Query(None, description="z.B. '2026-01'"),
     category: Optional[str] = Query(None),
+    account_id: Optional[int] = Query(None),
     limit: int = Query(200, le=1000),
     offset: int = 0,
 ):
@@ -22,6 +23,8 @@ def list_transactions(
         q = q.where(Transaction.month == month)
     if category:
         q = q.where(Transaction.category == category)
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
     q = q.order_by(col(Transaction.date).desc()).offset(offset).limit(limit)
     return session.exec(q).all()
 
@@ -46,18 +49,21 @@ def update_category(
 
 
 @router.get("/summary")
-def monthly_summary(session: Annotated[Session, Depends(get_session)]):
+def monthly_summary(
+    session: Annotated[Session, Depends(get_session)],
+    account_id: Optional[int] = Query(None),
+):
     """Monatliche Ein-/Ausgaben-Zusammenfassung via SQL-Aggregation."""
-    rows = session.exec(
-        select(
-            Transaction.month,
-            func.sum(case((Transaction.amount > 0, Transaction.amount), else_=0.0)).label("income"),
-            func.sum(case((Transaction.amount < 0, Transaction.amount), else_=0.0)).label("expenses_neg"),
-            func.count(Transaction.id).label("tx_count"),
-        )
-        .group_by(Transaction.month)
-        .order_by(col(Transaction.month))
-    ).all()
+    q = select(
+        Transaction.month,
+        func.sum(case((Transaction.amount > 0, Transaction.amount), else_=0.0)).label("income"),
+        func.sum(case((Transaction.amount < 0, Transaction.amount), else_=0.0)).label("expenses_neg"),
+        func.count(Transaction.id).label("tx_count"),
+    )
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
+    q = q.group_by(Transaction.month).order_by(col(Transaction.month))
+    rows = session.exec(q).all()
     return [
         {
             "month": row.month,
@@ -74,13 +80,16 @@ def monthly_summary(session: Annotated[Session, Depends(get_session)]):
 def category_breakdown(
     session: Annotated[Session, Depends(get_session)],
     month: Optional[str] = Query(None),
+    account_id: Optional[int] = Query(None),
 ):
-    """Ausgaben pro Kategorie via SQL-Aggregation (optional gefiltert nach Monat)."""
+    """Ausgaben pro Kategorie via SQL-Aggregation (optional gefiltert nach Monat/Konto)."""
     q = select(Transaction.category, func.sum(Transaction.amount).label("total_neg")).where(
         Transaction.amount < 0
     )
     if month:
         q = q.where(Transaction.month == month)
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
     q = q.group_by(Transaction.category).order_by(text("total_neg"))
 
     rows = session.exec(q).all()
@@ -91,11 +100,16 @@ def category_breakdown(
 
 
 @router.get("/months")
-def available_months(session: Annotated[Session, Depends(get_session)]):
+def available_months(
+    session: Annotated[Session, Depends(get_session)],
+    account_id: Optional[int] = Query(None),
+):
     """Alle Monate für die Transaktionen vorhanden sind."""
-    rows = session.exec(
-        select(Transaction.month).distinct().order_by(col(Transaction.month).desc())
-    ).all()
+    q = select(Transaction.month).distinct()
+    if account_id is not None:
+        q = q.where(Transaction.account_id == account_id)
+    q = q.order_by(col(Transaction.month).desc())
+    rows = session.exec(q).all()
     return list(rows)
 
 

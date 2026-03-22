@@ -6,10 +6,11 @@ import io
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from sqlmodel import Session, select, col, func
 
 from backend.database import get_session
+from backend.models.account import BankAccount
 from backend.models.transaction import Transaction
 from backend.models.etf import ETFPurchase
 from backend.services.categorizer import categorize_batch
@@ -26,10 +27,31 @@ def _extract_statement_label(filename: str) -> str:
     return m.group(0) if m else filename[:20]
 
 
+def _get_or_create_account(session: Session, iban: str, account_name: str) -> BankAccount | None:
+    """Findet Konto per IBAN oder legt es neu an. Gibt None zurück wenn keine Infos vorhanden."""
+    if not iban and not account_name:
+        return None
+
+    if iban:
+        existing = session.exec(
+            select(BankAccount).where(BankAccount.iban == iban)
+        ).first()
+        if existing:
+            return existing
+
+    name = account_name.strip() if account_name.strip() else (iban or "Unbekanntes Konto")
+    account = BankAccount(name=name, iban=iban)
+    session.add(account)
+    session.commit()
+    session.refresh(account)
+    return account
+
+
 @router.post("/pdf")
 async def import_pdf(
     file: UploadFile,
     session: Annotated[Session, Depends(get_session)],
+    account_name: str = Form(""),
 ):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Nur PDF-Dateien erlaubt")
@@ -39,7 +61,7 @@ async def import_pdf(
 
     # Parsen
     try:
-        parsed = parse_pdf(io.BytesIO(content), statement_label)
+        parsed, iban = parse_pdf(io.BytesIO(content), statement_label)
     except Exception as e:
         import traceback, logging
         logging.getLogger(__name__).error("PDF parse error: %s\n%s", e, traceback.format_exc())
@@ -48,6 +70,10 @@ async def import_pdf(
     if not parsed:
         raise HTTPException(422, "Keine Transaktionen im PDF gefunden")
 
+    # Konto anlegen/finden
+    account = _get_or_create_account(session, iban, account_name)
+    account_id = account.id if account else None
+
     # Duplikate filtern
     existing_hashes = set(
         session.exec(select(Transaction.import_hash)).all()
@@ -55,7 +81,14 @@ async def import_pdf(
     new_txs = [p for p in parsed if p.import_hash not in existing_hashes]
 
     if not new_txs:
-        return {"imported": 0, "skipped": len(parsed), "message": "Alle Buchungen bereits vorhanden"}
+        return {
+            "imported": 0,
+            "skipped": len(parsed),
+            "message": "Alle Buchungen bereits vorhanden",
+            "account_id": account_id,
+            "account_name": account.name if account else None,
+            "iban": iban or None,
+        }
 
     # Kategorisieren (nur Nicht-ETF-Transaktionen)
     non_etf = [t for t in new_txs if not t.is_etf]
@@ -105,6 +138,7 @@ async def import_pdf(
             category=category,
             category_source=cat_source,
             account_statement=statement_label,
+            account_id=account_id,
             month=month_str,
             import_hash=p.import_hash,
         )
@@ -119,6 +153,9 @@ async def import_pdf(
         "skipped": skipped,
         "total_in_pdf": len(parsed),
         "statement": statement_label,
+        "account_id": account_id,
+        "account_name": account.name if account else None,
+        "iban": iban or None,
     }
 
 

@@ -47,11 +47,16 @@
   <section class="view active" id="view-dashboard">
     <div class="view-header">
       <h1>Dashboard</h1>
-      <div class="month-selector">
-        <button class="btn-icon" id="monthPrev">&#8592;</button>
-        <span id="monthLabel">Gesamt</span>
-        <button class="btn-icon" id="monthNext">&#8594;</button>
-        <button class="btn-secondary" id="monthAll">Alle</button>
+      <div class="header-controls">
+        <select id="dashAccountFilter" class="select-input">
+          <option value="">Alle Konten</option>
+        </select>
+        <div class="month-selector">
+          <button class="btn-icon" id="monthPrev">&#8592;</button>
+          <span id="monthLabel">Gesamt</span>
+          <button class="btn-icon" id="monthNext">&#8594;</button>
+          <button class="btn-secondary" id="monthAll">Alle</button>
+        </div>
       </div>
     </div>
 
@@ -111,6 +116,9 @@
         <span id="txBalanceSummary" class="tx-balance-summary"></span>
       </div>
       <div class="filter-row">
+        <select id="txAccountFilter" class="select-input">
+          <option value="">Alle Konten</option>
+        </select>
         <select id="txFilterMonth" class="select-input">
           <option value="">Alle Monate</option>
         </select>
@@ -174,6 +182,28 @@
       </div>
     </div>
 
+    <!-- 5-Jahres-Prognose -->
+    <div class="card" id="etfForecastCard">
+      <div class="card-header-row">
+        <div class="card-label">5-Jahres-Prognose</div>
+        <span class="card-hint">Best 10% · Ø 7% · Worst 3% p.a. inkl. monatl. Sparplan</span>
+      </div>
+      <div class="chart-wrap h280"><canvas id="etfForecastChart"></canvas></div>
+      <div class="forecast-table-wrap">
+        <table class="data-table forecast-table" id="etfForecastTable">
+          <thead>
+            <tr>
+              <th>Jahr</th>
+              <th class="right accent-best">Best (10%)</th>
+              <th class="right accent-casual">Ø Casual (7%)</th>
+              <th class="right accent-worst">Worst (3%)</th>
+            </tr>
+          </thead>
+          <tbody id="etfForecastBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-label">Position hinzufügen</div>
       <form id="etfAddForm" class="etf-add-form">
@@ -224,6 +254,14 @@
     </div>
 
     <div class="import-area">
+      <div class="card">
+        <div class="card-label">Kontoname (optional)</div>
+        <div class="account-name-row">
+          <input type="text" id="importAccountName" class="text-input" placeholder="z. B. Girokonto, Tagesgeld …" style="max-width:320px">
+          <span class="account-name-hint">Wird automatisch aus IBAN erkannt – hier als Alias überschreibbar</span>
+        </div>
+      </div>
+
       <div class="drop-zone" id="dropZone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <p>DKB Kontoauszug PDF hier ablegen</p>
@@ -237,6 +275,11 @@
         <div class="card-label">Import Ergebnis</div>
         <div id="importResultContent"></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Meine Konten</div>
+      <div id="accountList"></div>
     </div>
 
     <div class="card">
@@ -259,6 +302,21 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="catModalCancel">Abbrechen</button>
       <button class="btn-primary" id="catModalSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Rename Modal -->
+<div class="modal-overlay" id="accountModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Konto umbenennen</span>
+      <button class="btn-icon" id="accountModalClose">✕</button>
+    </div>
+    <input type="text" id="accountModalName" class="text-input full-width" placeholder="Kontoname">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="accountModalCancel">Abbrechen</button>
+      <button class="btn-primary" id="accountModalSave">Speichern</button>
     </div>
   </div>
 </div>

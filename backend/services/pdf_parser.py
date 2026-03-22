@@ -42,6 +42,8 @@ FOOTER_PATTERNS: list[re.Pattern] = [
 ]
 DATE_RE    = re.compile(r"^\d{2}\.\d{2}\.\d{4}$")
 AMOUNT_RE  = re.compile(r"-?\d{1,3}(?:\.\d{3})*,\d{2}")
+# IBAN-Muster: DE + 2 Prüfziffern + 18 Ziffern (ggf. mit Leerzeichen)
+IBAN_RE    = re.compile(r"DE\d{2}[\s\d]{15,25}")
 
 ETF_KEYWORDS  = ("Wertpapierabrechnung", "Wertp.Abrechn.", "Wertpapierertrag")
 SKIP_KEYWORDS = ("Kontostand", "Dispositionskredit", "Gesamtumsatz",
@@ -110,6 +112,14 @@ def _extract_etf_meta(description: str) -> dict:
 def _make_hash(tx_date: date, description: str, amount: float, statement_label: str = "") -> str:
     key = f"{statement_label}|{tx_date}|{description[:60]}|{amount:.2f}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def extract_iban(raw_text: str) -> str:
+    """Extrahiert die erste DE-IBAN aus dem PDF-Rohtext (vor Footer-Stripping)."""
+    match = IBAN_RE.search(raw_text)
+    if not match:
+        return ""
+    return re.sub(r"\s+", "", match.group(0))  # Leerzeichen entfernen → "DE12345..."
 
 
 def _should_skip(text: str) -> bool:
@@ -201,8 +211,8 @@ def _parse_text(full_text: str) -> list[dict]:
     return raw_entries
 
 
-def parse_pdf(file: BinaryIO, statement_label: str = "") -> list[ParsedTransaction]:
-    """PDF-Bytes → Liste ParsedTransaction."""
+def parse_pdf(file: BinaryIO, statement_label: str = "") -> tuple[list[ParsedTransaction], str]:
+    """PDF-Bytes → (Liste ParsedTransaction, IBAN oder '')."""
     results: list[ParsedTransaction] = []
 
     with pdfplumber.open(file) as pdf:
@@ -212,6 +222,7 @@ def parse_pdf(file: BinaryIO, statement_label: str = "") -> list[ParsedTransacti
             text = page.extract_text(x_tolerance=2, y_tolerance=3) or ""
             full_text += text + "\n"
 
+        iban = extract_iban(full_text)
         raw_entries = _parse_text(_strip_footers(full_text))
 
         for entry in raw_entries:
@@ -244,4 +255,4 @@ def parse_pdf(file: BinaryIO, statement_label: str = "") -> list[ParsedTransacti
             )
             results.append(tx)
 
-    return results
+    return results, iban
