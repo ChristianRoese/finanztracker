@@ -98,10 +98,10 @@ def _clean_merchant(description: str) -> str:
 
 def _extract_etf_meta(description: str) -> dict:
     meta: dict = {}
-    isin_match   = re.search(r"ISIN\s+([A-Z]{2}[A-Z0-9]{10})", description)
-    wkn_match    = re.search(r"WKN\s+([A-Z0-9]{6})", description)
-    shares_match = re.search(r"Stück\s+([\d,]+)", description)
-    price_match  = re.search(r"Preis\s+([\d.,]+)\s*EUR", description)
+    isin_match   = re.search(r"ISIN[:\s]+([A-Z]{2}[A-Z0-9]{10})", description)
+    wkn_match    = re.search(r"WKN[:\s]+([A-Z0-9]{6})", description)
+    shares_match = re.search(r"Stück[:\s]+([\d,.]+)", description)
+    price_match  = re.search(r"(?:Preis|Kurs)\s+([\d.,]+)\s*EUR", description)
     if isin_match:   meta["isin"]   = isin_match.group(1)
     if wkn_match:    meta["wkn"]    = wkn_match.group(1)
     if shares_match: meta["shares"] = _parse_amount(shares_match.group(1)) or 0.0

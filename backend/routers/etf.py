@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlmodel import Session, col, select
 
 from backend.database import get_session
@@ -12,6 +13,14 @@ router = APIRouter(prefix="/api/etf", tags=["etf"])
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
+class ETFPositionCreate(BaseModel):
+    isin: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    wkn: str = ""
+    ticker: str = ""
+    monthly_amount: float = 0.0
+
+
 @router.get("/positions")
 def get_positions(session: SessionDep) -> list[dict]:
     return get_portfolio_summary(session)
@@ -19,17 +28,13 @@ def get_positions(session: SessionDep) -> list[dict]:
 
 @router.post("/positions", status_code=201)
 def create_position(
-    isin: Annotated[str, Query(min_length=1)],
-    name: Annotated[str, Query(min_length=1)],
+    body: ETFPositionCreate,
     session: SessionDep,
-    monthly_amount: float = 0.0,
-    wkn: str = "",
-    ticker: str = "",
 ) -> ETFPosition:
-    existing = session.exec(select(ETFPosition).where(ETFPosition.isin == isin)).first()
+    existing = session.exec(select(ETFPosition).where(ETFPosition.isin == body.isin)).first()
     if existing:
-        raise HTTPException(409, f"Position mit ISIN {isin} existiert bereits")
-    pos = ETFPosition(isin=isin, name=name, wkn=wkn, ticker=ticker, monthly_amount=monthly_amount)
+        raise HTTPException(409, f"Position mit ISIN {body.isin} existiert bereits")
+    pos = ETFPosition(isin=body.isin, name=body.name, wkn=body.wkn, ticker=body.ticker, monthly_amount=body.monthly_amount)
     session.add(pos)
     session.commit()
     session.refresh(pos)

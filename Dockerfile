@@ -5,6 +5,8 @@ WORKDIR /app
 # System dependencies for pdfplumber (poppler)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpoppler-cpp-dev \
+    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
