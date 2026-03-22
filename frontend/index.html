@@ -52,10 +52,12 @@
           <option value="">Alle Konten</option>
         </select>
         <div class="month-selector">
-          <button class="btn-icon" id="monthPrev">&#8592;</button>
-          <span id="monthLabel">Gesamt</span>
-          <button class="btn-icon" id="monthNext">&#8594;</button>
-          <button class="btn-secondary" id="monthAll">Alle</button>
+          <select id="yearFilter" class="select-input">
+            <option value="">Alle Jahre</option>
+          </select>
+          <select id="monthFilter" class="select-input" disabled>
+            <option value="">Alle Monate</option>
+          </select>
         </div>
       </div>
     </div>
@@ -132,11 +134,11 @@
       <table class="data-table" id="txTable">
         <thead>
           <tr>
-            <th>Datum</th>
-            <th>Händler</th>
+            <th class="sortable" data-col="date">Datum <span class="sort-icon">↕</span></th>
+            <th class="sortable" data-col="merchant">Händler <span class="sort-icon">↕</span></th>
             <th>Beschreibung</th>
-            <th>Kategorie</th>
-            <th class="right">Betrag</th>
+            <th class="sortable" data-col="category">Kategorie <span class="sort-icon">↕</span></th>
+            <th class="sortable right" data-col="amount">Betrag <span class="sort-icon">↕</span></th>
           </tr>
         </thead>
         <tbody id="txBody"></tbody>

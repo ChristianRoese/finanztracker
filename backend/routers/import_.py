@@ -12,7 +12,7 @@ from sqlmodel import Session, select, col, func
 from backend.database import get_session
 from backend.models.account import BankAccount
 from backend.models.transaction import Transaction
-from backend.models.etf import ETFPurchase
+from backend.models.etf import ETFPosition, ETFPurchase
 from backend.services.categorizer import categorize_batch
 from backend.services.etf_service import get_or_create_position
 from backend.services.pdf_parser import parse_pdf
@@ -90,8 +90,8 @@ async def import_pdf(
             "iban": iban or None,
         }
 
-    # Kategorisieren (nur Nicht-ETF-Transaktionen)
-    non_etf = [t for t in new_txs if not t.is_etf]
+    # Kategorisieren (nur Nicht-ETF- und Nicht-Dividenden-Transaktionen)
+    non_etf = [t for t in new_txs if not t.is_etf and not t.is_dividend]
     cat_items = [
         {"id": t.import_hash, "merchant": t.merchant, "description": t.description, "amount": t.amount}
         for t in non_etf
@@ -106,8 +106,13 @@ async def import_pdf(
     for p in new_txs:
         month_str = f"{p.date.year}-{p.date.month:02d}"
 
-        if p.is_etf and p.etf_isin:
-            # ETF-Kauf speichern
+        if p.is_dividend:
+            # Dividende → als Einnahme buchen, kein ETF-Kauf
+            category = "Einnahmen"
+            cat_source = "rule"
+        elif p.is_etf and p.etf_isin:
+            # ETF-Kauf (amount < 0) oder Verkauf (amount > 0)
+            is_sale = p.amount > 0
             pos = get_or_create_position(
                 session, p.etf_isin, p.etf_wkn or "", p.description[:60]
             )
@@ -119,6 +124,7 @@ async def import_pdf(
                     shares=p.etf_shares,
                     total_eur=abs(p.amount),
                     source="import",
+                    transaction_type="sell" if is_sale else "buy",
                 )
                 session.add(purchase)
                 imported_etf += 1
@@ -145,6 +151,23 @@ async def import_pdf(
         session.add(tx)
         imported_tx += 1
 
+    session.commit()
+
+    # Nach Import: fully_sold automatisch setzen wenn Net-Shares <= 0
+    positions = session.exec(select(ETFPosition)).all()
+    for pos in positions:
+        purchases = session.exec(
+            select(ETFPurchase).where(ETFPurchase.position_id == pos.id)
+        ).all()
+        if purchases:
+            net = sum(
+                p.shares if p.transaction_type == "buy" else -p.shares
+                for p in purchases
+            )
+            should_be_sold = net <= 0.001
+            if pos.fully_sold != should_be_sold:
+                pos.fully_sold = should_be_sold
+                session.add(pos)
     session.commit()
 
     return {

@@ -23,7 +23,6 @@ export const CAT_COLORS = {
 
 // ── State ──────────────────────────────────────────────
 let months = [];
-let currentMonthIdx = -1;  // -1 = all
 let allCategories = [];
 let allAccounts = [];
 let selectedAccountId = null;  // null = all accounts
@@ -32,6 +31,7 @@ const TX_PAGE_SIZE = 50;
 let editingTxId = null;
 let editingAccountId = null;
 let allTransactions = [];
+let txSort = { col: 'date', dir: 'desc' };
 
 // ── Utils ──────────────────────────────────────────────
 export function makeEmptyState(text) {
@@ -151,62 +151,89 @@ document.getElementById('txAccountFilter').addEventListener('change', e => {
   loadTransactions();
 });
 
-// ── Month navigation ───────────────────────────────────
+// ── Month/Year filter dropdowns ────────────────────────
 async function loadMonths() {
   try {
     const params = selectedAccountId != null ? `?account_id=${selectedAccountId}` : '';
     months = await apiFetch(`/api/transactions/months${params}`);
   } catch { months = []; }
-  updateMonthLabel();
+  populateYearMonthDropdowns();
 }
 
 function currentMonth() {
-  return currentMonthIdx >= 0 ? months[currentMonthIdx] : null;
+  const year  = document.getElementById('yearFilter').value;
+  const month = document.getElementById('monthFilter').value;
+  if (!year && !month) return null;
+  if (year && month) return `${year}-${month}`;
+  // year only or month only → filter via loadDashboard using partial values
+  return null;
 }
 
-function updateMonthLabel() {
-  const label = document.getElementById('monthLabel');
-  const m = currentMonth();
-  if (!m) { label.textContent = 'Gesamt'; return; }
-  const [y, mo] = m.split('-');
-  const names = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-  label.textContent = `${names[parseInt(mo)-1]} ${y}`;
+function populateYearMonthDropdowns() {
+  const yearSel  = document.getElementById('yearFilter');
+  const monthSel = document.getElementById('monthFilter');
+  const prevYear  = yearSel.value;
+  const prevMonth = monthSel.value;
+
+  // Collect unique years from months list
+  const years = [...new Set(months.map(m => m.split('-')[0]))].sort((a, b) => b - a);
+  while (yearSel.options.length > 1) yearSel.remove(1);
+  years.forEach(y => yearSel.appendChild(new Option(y, y)));
+  if (prevYear) yearSel.value = prevYear;
+
+  // Populate month names (fixed list)
+  const MONTH_NAMES = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  while (monthSel.options.length > 1) monthSel.remove(1);
+  MONTH_NAMES.forEach((name, i) => {
+    const val = String(i + 1).padStart(2, '0');
+    monthSel.appendChild(new Option(name, val));
+  });
+  if (prevMonth) monthSel.value = prevMonth;
 }
 
-document.getElementById('monthPrev').addEventListener('click', () => {
-  if (currentMonthIdx < months.length - 1) currentMonthIdx++;
-  else currentMonthIdx = -1;
-  updateMonthLabel();
-  loadDashboard();
-});
+function getSelectedMonthParam() {
+  const year  = document.getElementById('yearFilter').value;
+  const month = document.getElementById('monthFilter').value;
+  if (year && month) return `${year}-${month}`;
+  return null;
+}
 
-document.getElementById('monthNext').addEventListener('click', () => {
-  if (currentMonthIdx === -1) currentMonthIdx = 0;
-  else if (currentMonthIdx > 0) currentMonthIdx--;
-  updateMonthLabel();
+document.getElementById('yearFilter').addEventListener('change', () => {
+  const year = document.getElementById('yearFilter').value;
+  const monthSel = document.getElementById('monthFilter');
+  if (!year) {
+    monthSel.value = '';
+    monthSel.disabled = true;
+  } else {
+    monthSel.disabled = false;
+  }
   loadDashboard();
 });
-
-document.getElementById('monthAll').addEventListener('click', () => {
-  currentMonthIdx = -1;
-  updateMonthLabel();
-  loadDashboard();
-});
+document.getElementById('monthFilter').addEventListener('change', () => loadDashboard());
 
 // ── Dashboard ──────────────────────────────────────────
 async function loadDashboard() {
-  const m = currentMonth();
+  const m = getSelectedMonthParam();
+  const year  = document.getElementById('yearFilter').value;
   const qp = new URLSearchParams();
   if (m) qp.set('month', m);
+  else if (year) qp.set('year', year);
   if (selectedAccountId != null) qp.set('account_id', selectedAccountId);
   const params = qp.toString() ? `?${qp}` : '';
 
   try {
-    const [summary, catBreakdown] = await Promise.all([
-      apiFetch(`/api/transactions/summary${selectedAccountId != null ? `?account_id=${selectedAccountId}` : ''}`),
+    const summaryQp = new URLSearchParams();
+    if (selectedAccountId != null) summaryQp.set('account_id', selectedAccountId);
+    const [summaryRaw, catBreakdown] = await Promise.all([
+      apiFetch(`/api/transactions/summary${summaryQp.toString() ? `?${summaryQp}` : ''}`),
       apiFetch(`/api/transactions/categories${params}`),
     ]);
-    const allSummary = summary;
+
+    // Filter summary by selected year if no specific month chosen
+    const summary = (year && !m)
+      ? summaryRaw.filter(s => s.month.startsWith(year))
+      : summaryRaw;
+    const allSummary = summaryRaw;
 
     // KPIs – show dash when no data
     if (!summary.length) {
@@ -240,8 +267,8 @@ async function loadDashboard() {
       const months_count = m ? 1 : (summary.length || 1);
       if (m) {
         // Show month-over-month delta vs previous month
-        const mIdx = summary.findIndex(s => s.month === m);
-        const prev = mIdx > 0 ? summary[mIdx - 1] : null;
+        const mIdx = summaryRaw.findIndex(s => s.month === m);
+        const prev = mIdx > 0 ? summaryRaw[mIdx - 1] : null;
         if (prev) {
           const outDelta = prev.expenses > 0 ? ((expenses - prev.expenses) / prev.expenses * 100) : 0;
           const inDelta  = prev.income  > 0 ? ((income  - prev.income)  / prev.income  * 100) : 0;
@@ -306,9 +333,10 @@ async function loadDashboard() {
     }
 
     // Charts
-    renderBarChart(allSummary);
+    const month = getSelectedMonthParam()?.split('-')[1] || null;
+    renderBarChart(summaryRaw, year || null, month);
     renderDonutChart(expCats);
-    renderTrendChart(selectedAccountId);
+    renderTrendChart(selectedAccountId, year || null);
 
     // Donut legend
     const legend = document.getElementById('donutLegend');
@@ -373,9 +401,36 @@ function renderTxBalance(txs) {
     `<span class="tx-bal-total ${balance >= 0 ? 'positive' : 'negative'}">${sign}${fmtEur(balance)}</span>`;
 }
 
+function sortTransactions(txs) {
+  const { col, dir } = txSort;
+  return [...txs].sort((a, b) => {
+    let av = a[col], bv = b[col];
+    if (col === 'date') { av = av || ''; bv = bv || ''; }
+    if (typeof av === 'string') av = av.toLowerCase();
+    if (typeof bv === 'string') bv = bv.toLowerCase();
+    if (av < bv) return dir === 'asc' ? -1 : 1;
+    if (av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('#txTable th.sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (th.dataset.col === txSort.col) {
+      icon.textContent = txSort.dir === 'asc' ? '↑' : '↓';
+      th.classList.add('sort-active');
+    } else {
+      icon.textContent = '↕';
+      th.classList.remove('sort-active');
+    }
+  });
+}
+
 function renderTxTable(txs, page) {
+  const sorted = sortTransactions(txs);
   const start = page * TX_PAGE_SIZE;
-  const slice = txs.slice(start, start + TX_PAGE_SIZE);
+  const slice = sorted.slice(start, start + TX_PAGE_SIZE);
   const tbody = document.getElementById('txBody');
 
   if (!slice.length) {
@@ -449,6 +504,25 @@ async function populateFilters() {
   document.getElementById(id).addEventListener('change', () => { txPage = 0; loadTransactions(); })
 );
 document.getElementById('txSearch').addEventListener('input', () => { txPage = 0; loadTransactions(); });
+
+document.querySelectorAll('#txTable th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (txSort.col === col) {
+      txSort.dir = txSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      txSort.col = col;
+      txSort.dir = col === 'amount' ? 'desc' : 'asc';
+    }
+    txPage = 0;
+    updateSortHeaders();
+    let filtered = allTransactions;
+    const search = document.getElementById('txSearch').value.toLowerCase();
+    if (search) filtered = filtered.filter(t => t.merchant.toLowerCase().includes(search) || t.description.toLowerCase().includes(search));
+    renderTxTable(filtered, 0);
+    renderPagination(filtered.length);
+  });
+});
 
 // ── Category modal ─────────────────────────────────────
 window.openCatModal = function(id, merchant, currentCat) {

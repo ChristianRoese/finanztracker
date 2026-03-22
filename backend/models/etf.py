@@ -10,6 +10,7 @@ class ETFPosition(SQLModel, table=True):
     name: str
     ticker: str = ""                      # yfinance ticker (z.B. "XDWD.DE")
     monthly_amount: float = 0.0           # aktueller Sparplan-Betrag EUR
+    fully_sold: bool = False              # True = komplett verkauft, aus Portfolio ausblenden
 
 
 class ETFPurchase(SQLModel, table=True):
@@ -20,6 +21,7 @@ class ETFPurchase(SQLModel, table=True):
     shares: float
     total_eur: float
     source: str = "import"               # "import" | "manual"
+    transaction_type: str = "buy"        # "buy" | "sell"
 
 
 class ETFPrice(SQLModel, table=True):

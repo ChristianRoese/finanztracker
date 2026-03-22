@@ -56,20 +56,24 @@ def monthly_report(
 @router.get("/trends")
 def category_trends(
     session: Annotated[Session, Depends(get_session)],
-    months: int = Query(6, ge=1, le=24),
+    months: int = Query(12, ge=1, le=36),
     account_id: Optional[int] = Query(None),
+    year: Optional[str] = Query(None),
 ):
-    """Kategorien-Ausgaben über die letzten N Monate."""
-    today = date.today()
-    month_list: list[str] = []
-    y, m = today.year, today.month
-    for _ in range(months):
-        month_list.append(f"{y}-{m:02d}")
-        m -= 1
-        if m == 0:
-            m = 12
-            y -= 1
-    month_list.reverse()
+    """Kategorien-Ausgaben über die letzten N Monate oder ein bestimmtes Jahr."""
+    if year:
+        month_list = [f"{year}-{mo:02d}" for mo in range(1, 13)]
+    else:
+        today = date.today()
+        month_list: list[str] = []
+        y, m = today.year, today.month
+        for _ in range(months):
+            month_list.append(f"{y}-{m:02d}")
+            m -= 1
+            if m == 0:
+                m = 12
+                y -= 1
+        month_list.reverse()
 
     q = select(Transaction.month, Transaction.category, func.sum(func.abs(Transaction.amount))).where(
         Transaction.month.in_(month_list),

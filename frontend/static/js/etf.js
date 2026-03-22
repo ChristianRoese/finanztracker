@@ -65,9 +65,10 @@ async function loadEtfPositions() {
   try {
     const positions = await apiFetch('/api/etf/positions');
 
-    // KPIs
-    const totalInvested = positions.reduce((s,p) => s + p.total_invested, 0);
-    const totalValue    = positions.reduce((s,p) => s + p.current_value, 0);
+    // KPIs (nur aktive Positionen)
+    const active        = positions.filter(p => !p.fully_sold);
+    const totalInvested = active.reduce((s,p) => s + p.total_invested, 0);
+    const totalValue    = active.reduce((s,p) => s + p.current_value, 0);
     const totalGain     = totalValue - totalInvested;
     const totalGainPct  = totalInvested > 0 ? (totalGain / totalInvested * 100) : 0;
 
@@ -86,9 +87,10 @@ async function loadEtfPositions() {
       return;
     }
 
-    container.innerHTML = positions.map(p => {
-      const gainColor = p.gain_eur >= 0 ? 'var(--green)' : 'var(--red)';
+    container.innerHTML = positions.filter(p => !p.fully_sold).map(p => {
+      const gainColor = p.fully_sold ? 'var(--muted)' : (p.gain_eur >= 0 ? 'var(--green)' : 'var(--red)');
       const gainSign  = p.gain_eur >= 0 ? '+' : '';
+      const soldBadge = p.fully_sold ? '<span style="background:var(--muted);color:#000;font-size:0.65rem;padding:2px 6px;border-radius:4px;margin-left:6px">Vollständig verkauft</span>' : '';
 
       let cagrHtml = '';
       if (p.yearly_return_cagr != null) {
@@ -106,11 +108,11 @@ async function loadEtfPositions() {
         <div class="etf-position">
           <div class="etf-pos-header">
             <div>
-              <div class="etf-pos-name">${p.name}</div>
+              <div class="etf-pos-name">${p.name}${soldBadge}</div>
               <div class="etf-pos-isin">${p.isin} · ${p.wkn} · ${p.ticker || 'kein Ticker'}</div>
             </div>
             <div class="etf-pos-gain" style="color:${gainColor}">
-              ${gainSign}${fmtEur(p.gain_eur)} (${gainSign}${p.gain_pct.toFixed(2)}%)
+              ${p.fully_sold ? '–' : `${gainSign}${fmtEur(p.gain_eur)} (${gainSign}${p.gain_pct.toFixed(2)}%)`}
             </div>
           </div>
           <div class="etf-pos-meta">

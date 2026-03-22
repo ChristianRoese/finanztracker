@@ -18,18 +18,41 @@ logger = logging.getLogger(__name__)
 
 # Regelbasierte Fallbacks – werden VOR dem API-Call geprüft
 RULES: list[tuple[re.Pattern, str]] = [
+    # Lebensmittel
     (re.compile(r"globus|aldi|lidl|rewe|edeka|netto|penny|biomarkt|e\.?center", re.I), "Lebensmittel"),
+    (re.compile(r"b[äa]ckerei|stadtb[äa]ckerei|bachstube|heberer|rossmann|dm.?drog", re.I), "Lebensmittel"),
+    # Lieferando
     (re.compile(r"lieferando|dominos|call\s*a\s*pizza", re.I), "Lieferando"),
-    (re.compile(r"coffee\s*fellows|hai\s*asia|thang\s*long|burger\s*king|mcdonald|döner|imbiss|restaurant|café|kaffee", re.I), "Restaurant/Café"),
+    # Restaurant/Café
+    (re.compile(r"coffee[\s.]fellows|hai[\s.]asia|thang[\s.]long|burger[\s.]king|mcdonald|mc\.?donalds|döner|imbiss|restaurant|café|kaffee", re.I), "Restaurant/Café"),
+    (re.compile(r"al[\s.]porto|asian[\s.]ways|starbucks|25[\s.]grad|saray[\s.]grill|mudder[\s.]schulten", re.I), "Restaurant/Café"),
+    (re.compile(r"hiddenseer|venezia[\s.]am[\s.]see|cafe[\s.]im[\s.]klinikum|vielfalt[\s.]menue", re.I), "Restaurant/Café"),
+    (re.compile(r"sumup.*kaf|sumup.*asia|sumup.*grill|sumup.*restaurant|sumup.*bistro|sumup.*imbiss", re.I), "Restaurant/Café"),
+    # Amazon
     (re.compile(r"amazon|amzn", re.I), "Amazon"),
+    # Streaming
     (re.compile(r"netflix|spotify|disney|crunchyroll|prime.video|apple.*tv|wow\.tv", re.I), "Streaming"),
+    (re.compile(r"audible|kindle[\s.]svcs|apple\.com\.de", re.I), "Streaming"),
+    # Gaming
     (re.compile(r"blizzard|steam|g2a|epic\s*games|ccp\s*games|humble\s*bundle|playstation|xbox", re.I), "Gaming"),
+    (re.compile(r"warhammer|chess\.com", re.I), "Gaming"),
+    # Versicherung
     (re.compile(r"signal\s*iduna|huk.coburg|cosmos\s*vers|allianz|aok|tk\s*versicherung", re.I), "Versicherung"),
-    (re.compile(r"kreditabzahlung|santander|kfw|kredit", re.I), "Kredit & Schulden"),
+    # Kredit & Schulden
+    (re.compile(r"kreditabzahlung|santander|kfw|kredit|consors\s*finanz", re.I), "Kredit & Schulden"),
+    # Investments
     (re.compile(r"wertpapier|etf|depot|sparplan|msci|spdr", re.I), "Investments"),
+    (re.compile(r"trade[\s.]republic|steuerausgleich|kapitalertrag|solidaritaetszuschlag", re.I), "Investments"),
+    # Transport & Auto
     (re.compile(r"autohaus|tankstelle|kfz.steuer|hem\.|aral|shell|esso|parking|parkhaus", re.I), "Transport & Auto"),
+    (re.compile(r"agip|total[\s.]service[\s.]station|sb[\s.]?tank|warnowtunnel|tiefgarage|paybyphone", re.I), "Transport & Auto"),
+    (re.compile(r"detlev[\s.]louis|motorrad[\s.]zubeh|renninger[\s.]fahrzeug|flughafen|aeropuerto", re.I), "Transport & Auto"),
+    # Gesundheit
     (re.compile(r"apotheke|arzt|zahnarzt|tierarzt|petfood|futterhaus|shop\s*apotheke|docmorris", re.I), "Gesundheit"),
+    (re.compile(r"klinik[\s.]service|vier[\s.]tore[\s.]reha|klinikum|fielmann", re.I), "Gesundheit"),
+    # Einnahmen
     (re.compile(r"besoldung|lohn|gehalt|landesamt.*finanzen|zahlungseingang|gutschrift|erstattung|rückzahlung|überweisung.*eingang", re.I), "Einnahmen"),
+    # Sonstiges
     (re.compile(r"dauerauftrag|gewerkschaft|gdp|mitglied", re.I), "Sonstiges"),
 ]
 

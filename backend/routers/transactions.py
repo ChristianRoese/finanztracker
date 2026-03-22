@@ -80,14 +80,17 @@ def monthly_summary(
 def category_breakdown(
     session: Annotated[Session, Depends(get_session)],
     month: Optional[str] = Query(None),
+    year: Optional[str] = Query(None),
     account_id: Optional[int] = Query(None),
 ):
-    """Ausgaben pro Kategorie via SQL-Aggregation (optional gefiltert nach Monat/Konto)."""
+    """Ausgaben pro Kategorie via SQL-Aggregation (optional gefiltert nach Monat/Jahr/Konto)."""
     q = select(Transaction.category, func.sum(Transaction.amount).label("total_neg")).where(
         Transaction.amount < 0
     )
     if month:
         q = q.where(Transaction.month == month)
+    elif year:
+        q = q.where(col(Transaction.month).startswith(year))
     if account_id is not None:
         q = q.where(Transaction.account_id == account_id)
     q = q.group_by(Transaction.category).order_by(text("total_neg"))

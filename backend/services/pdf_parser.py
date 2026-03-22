@@ -45,9 +45,10 @@ AMOUNT_RE  = re.compile(r"-?\d{1,3}(?:\.\d{3})*,\d{2}")
 # IBAN-Muster: DE + 2 Prüfziffern + 18 Ziffern (ggf. mit Leerzeichen)
 IBAN_RE    = re.compile(r"DE\d{2}[\s\d]{15,25}")
 
-ETF_KEYWORDS  = ("Wertpapierabrechnung", "Wertp.Abrechn.", "Wertpapierertrag")
-SKIP_KEYWORDS = ("Kontostand", "Dispositionskredit", "Gesamtumsatz",
-                 "Hinweise", "Summe Soll", "Summe Haben", "Auszug Nr.")
+ETF_KEYWORDS      = ("Wertpapierabrechnung", "Wertp.Abrechn.")
+DIVIDEND_KEYWORDS = ("Wertpapierertrag",)
+SKIP_KEYWORDS     = ("Kontostand", "Dispositionskredit", "Gesamtumsatz",
+                     "Hinweise", "Summe Soll", "Summe Haben", "Auszug Nr.")
 
 
 @dataclass
@@ -57,6 +58,7 @@ class ParsedTransaction:
     merchant: str
     amount: float
     is_etf: bool = False
+    is_dividend: bool = False
     etf_isin: Optional[str] = None
     etf_wkn: Optional[str] = None
     etf_shares: Optional[float] = None
@@ -237,7 +239,8 @@ def parse_pdf(file: BinaryIO, statement_label: str = "") -> tuple[list[ParsedTra
 
             # Betrag-Vorzeichen: DKB schreibt Soll bereits negativ, Haben positiv
             # Sicherheitshalber: Soll-Buchungen sind negativ
-            is_etf = any(kw in description for kw in ETF_KEYWORDS)
+            is_etf     = any(kw in description for kw in ETF_KEYWORDS)
+            is_dividend = any(kw in description for kw in DIVIDEND_KEYWORDS)
             etf_meta = _extract_etf_meta(description) if is_etf else {}
 
             tx = ParsedTransaction(
@@ -246,6 +249,7 @@ def parse_pdf(file: BinaryIO, statement_label: str = "") -> tuple[list[ParsedTra
                 merchant=_clean_merchant(description),
                 amount=amount,
                 is_etf=is_etf,
+                is_dividend=is_dividend,
                 etf_isin=etf_meta.get("isin"),
                 etf_wkn=etf_meta.get("wkn"),
                 etf_shares=etf_meta.get("shares"),

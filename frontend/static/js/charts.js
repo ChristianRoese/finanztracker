@@ -38,7 +38,7 @@ export function initCharts() {
   Chart.defaults.font.family = 'DM Mono';
 }
 
-export function renderBarChart(allSummary) {
+export function renderBarChart(allSummary, selectedYear = null, selectedMonth = null) {
   const ctx = document.getElementById('barChart');
   if (!ctx) return;
 
@@ -59,8 +59,25 @@ export function renderBarChart(allSummary) {
   const emp = wrap && wrap.querySelector('.chart-empty');
   if (emp) emp.remove();
 
-  // Last 6 months
-  const recent = allSummary.slice(-6);
+  let recent;
+  if (selectedYear && selectedMonth) {
+    // Spezifischer Monat: zeige 3 Monate davor + gewählter + 2 danach (6 gesamt, zentriert)
+    const target = `${selectedYear}-${selectedMonth}`;
+    const idx = allSummary.findIndex(s => s.month === target);
+    if (idx >= 0) {
+      const from = Math.max(0, idx - 3);
+      const to   = Math.min(allSummary.length, from + 6);
+      recent = allSummary.slice(Math.max(0, to - 6), to);
+    } else {
+      recent = allSummary.slice(-6);
+    }
+  } else if (selectedYear) {
+    // Nur Jahr: alle Monate des Jahres
+    recent = allSummary.filter(s => s.month.startsWith(selectedYear));
+  } else {
+    // Kein Filter: letzte 6 Monate
+    recent = allSummary.slice(-6);
+  }
   const labels  = recent.map(s => {
     const [y, m] = s.month.split('-');
     const names = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
@@ -154,7 +171,7 @@ export function renderDonutChart(catBreakdown) {
   });
 }
 
-export async function renderTrendChart(accountId = null) {
+export async function renderTrendChart(accountId = null, year = null) {
   const ctx = document.getElementById('trendChart');
   if (!ctx) return;
 
@@ -162,8 +179,9 @@ export async function renderTrendChart(accountId = null) {
 
   let data;
   try {
-    const params = new URLSearchParams({ months: 6 });
+    const params = new URLSearchParams({ months: 12 });
     if (accountId != null) params.set('account_id', accountId);
+    if (year) params.set('year', year);
     data = await apiFetch(`/api/reports/trends?${params}`);
   } catch {
     data = null;
@@ -189,9 +207,16 @@ export async function renderTrendChart(accountId = null) {
 
   const FALLBACK_PALETTE = ['#f0a500','#e05a7a','#c084fc','#3d9cf5','#34d399','#fb7185','#22d3ee','#a3e635'];
   const monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-  const labels = data.months.map(m => {
-    const [, mo] = m.split('-');
-    return monthNames[parseInt(mo) - 1];
+
+  // Trailing-Monate ohne Daten abschneiden
+  let lastDataIdx = data.months.length - 1;
+  while (lastDataIdx > 0 && data.series.every(s => (s.values[lastDataIdx] || 0) === 0)) {
+    lastDataIdx--;
+  }
+  const trimmedMonths = data.months.slice(0, lastDataIdx + 1);
+  const labels = trimmedMonths.map(m => {
+    const [y, mo] = m.split('-');
+    return `${monthNames[parseInt(mo) - 1]} ${y.slice(2)}`;
   });
 
   const TOP_N = 5;
@@ -204,7 +229,7 @@ export async function renderTrendChart(accountId = null) {
     const color = CAT_COLORS[s.category] || FALLBACK_PALETTE[i % FALLBACK_PALETTE.length];
     return {
       label: s.category,
-      data: s.values,
+      data: s.values.slice(0, lastDataIdx + 1),
       borderColor: color,
       backgroundColor: 'transparent',
       borderWidth: 1.5,
