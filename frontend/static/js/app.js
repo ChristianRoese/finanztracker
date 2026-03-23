@@ -566,7 +566,7 @@ async function loadAccountList() {
         <tbody>
           ${accounts.map(a => `<tr>
             <td><strong>${escHtml(a.name)}</strong></td>
-            <td class="muted" style="font-size:0.78rem;font-family:'DM Mono',monospace">${escHtml(a.iban || '–')}</td>
+            <td class="muted" style="font-size:0.78rem;font-family:'IBM Plex Mono',monospace">${escHtml(a.iban || '–')}</td>
             <td class="right muted">${a.tx_count}</td>
             <td class="muted" style="font-size:0.78rem">${a.date_from ? fmtDate(a.date_from) + ' – ' + fmtDate(a.date_to) : '–'}</td>
             <td class="action-cell">

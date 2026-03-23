@@ -93,7 +93,7 @@ export function initImport(onImportDone, onHistoryLoad, onAccountsChanged) {
       labelEl.style.cssText = 'color:var(--muted);font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem';
       labelEl.textContent = s.label;
       const valWrap = document.createElement('div');
-      valWrap.style.cssText = `font-size:1.4rem;font-family:'Syne',sans-serif;color:${s.color};display:flex;align-items:baseline;gap:0.3rem`;
+      valWrap.style.cssText = `font-size:1.4rem;font-family:'IBM Plex Mono',monospace;color:${s.color};display:flex;align-items:baseline;gap:0.3rem`;
       const iconEl = document.createElement('span');
       iconEl.style.cssText = 'font-size:0.85rem;opacity:0.7';
       iconEl.textContent = s.icon;

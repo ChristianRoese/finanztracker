@@ -4,201 +4,272 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Finanztracker</title>
+<meta name="description" content="Persönliches Finanz-Tracking: Konten, Transaktionen, ETF-Portfolio">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
-<nav class="sidebar">
-  <div class="sidebar-logo">
-    <span class="logo-mark">FT</span>
-    <span class="logo-text">Finanz<br>tracker</span>
+<!-- ══ SIDEBAR NAVIGATION ══════════════════════════════ -->
+<nav class="sidebar" role="navigation" aria-label="Hauptnavigation">
+  <div class="sidebar-logo" aria-hidden="true">
+    <div class="logo-mark" role="img" aria-label="Finanztracker Logo"></div>
+    <div class="logo-text">
+      <strong>Finanztracker</strong>
+      Privates Haushaltsbuch
+    </div>
   </div>
-  <ul class="nav-links">
-    <li><a href="#" class="nav-link active" data-view="dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </a></li>
-    <li><a href="#" class="nav-link" data-view="transactions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Transaktionen
-    </a></li>
-    <li><a href="#" class="nav-link" data-view="etf">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      ETF Portfolio
-    </a></li>
-    <li><a href="#" class="nav-link" data-view="import">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      PDF Import
-    </a></li>
+
+  <ul class="nav-links" role="list">
+    <li role="listitem">
+      <a href="#" class="nav-link active" data-view="dashboard"
+         aria-label="Dashboard anzeigen" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+    </li>
+    <li role="listitem">
+      <a href="#" class="nav-link" data-view="transactions"
+         aria-label="Transaktionen anzeigen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="1"/>
+          <line x1="9" y1="12" x2="15" y2="12"/>
+          <line x1="9" y1="16" x2="13" y2="16"/>
+        </svg>
+        <span>Transaktionen</span>
+      </a>
+    </li>
+    <li role="listitem">
+      <a href="#" class="nav-link" data-view="etf"
+         aria-label="ETF Portfolio anzeigen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+          <polyline points="16 7 22 7 22 13"/>
+        </svg>
+        <span>ETF Portfolio</span>
+      </a>
+    </li>
+    <li role="listitem">
+      <a href="#" class="nav-link" data-view="import"
+         aria-label="PDF Import anzeigen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>PDF Import</span>
+      </a>
+    </li>
   </ul>
+
   <div class="sidebar-footer">
-    <div class="api-status" id="apiStatus">
-      <span class="status-dot"></span>
+    <div class="api-status" id="apiStatus" role="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
       <span class="status-text">Verbinde…</span>
     </div>
   </div>
 </nav>
 
-<main class="main-content">
+<!-- ══ MAIN CONTENT ════════════════════════════════════ -->
+<main class="main-content" id="main" role="main">
 
-  <!-- ── DASHBOARD VIEW ── -->
-  <section class="view active" id="view-dashboard">
+  <!-- ── DASHBOARD ──────────────────────────────────── -->
+  <section class="view active" id="view-dashboard" aria-labelledby="heading-dashboard">
     <div class="view-header">
-      <h1>Dashboard</h1>
-      <div class="header-controls">
-        <select id="dashAccountFilter" class="select-input">
+      <h1 id="heading-dashboard">Dashboard</h1>
+      <div class="header-controls" role="group" aria-label="Dashboard Filter">
+        <label class="sr-only" for="dashAccountFilter">Konto auswählen</label>
+        <select id="dashAccountFilter" class="select-input" aria-label="Konto filtern">
           <option value="">Alle Konten</option>
         </select>
-        <div class="month-selector">
-          <select id="yearFilter" class="select-input">
+        <div class="month-selector" role="group" aria-label="Zeitraum auswählen">
+          <label class="sr-only" for="yearFilter">Jahr</label>
+          <select id="yearFilter" class="select-input" aria-label="Jahr filtern">
             <option value="">Alle Jahre</option>
           </select>
-          <select id="monthFilter" class="select-input" disabled>
+          <label class="sr-only" for="monthFilter">Monat</label>
+          <select id="monthFilter" class="select-input" disabled aria-label="Monat filtern">
             <option value="">Alle Monate</option>
           </select>
         </div>
       </div>
     </div>
 
-    <div class="kpi-row" id="kpiRow">
-      <div class="kpi-card">
+    <!-- KPI Row -->
+    <div class="kpi-row" id="kpiRow" role="list" aria-label="Kennzahlen">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Ausgaben</div>
-        <div class="kpi-value negative" id="kpiOut">–</div>
-        <div class="kpi-sub" id="kpiOutSub"></div>
+        <div class="kpi-value negative" id="kpiOut" aria-label="Ausgaben">–</div>
+        <div class="kpi-sub" id="kpiOutSub" aria-live="polite"></div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Einnahmen</div>
-        <div class="kpi-value positive" id="kpiIn">–</div>
-        <div class="kpi-sub" id="kpiInSub"></div>
+        <div class="kpi-value positive" id="kpiIn" aria-label="Einnahmen">–</div>
+        <div class="kpi-sub" id="kpiInSub" aria-live="polite"></div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Sparquote</div>
-        <div class="kpi-value accent" id="kpiSavings">–</div>
-        <div class="kpi-sub" id="kpiSavingsSub"></div>
+        <div class="kpi-value accent" id="kpiSavings" aria-label="Sparquote">–</div>
+        <div class="kpi-sub" id="kpiSavingsSub" aria-live="polite"></div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Netto-Saldo</div>
-        <div class="kpi-value" id="kpiNet">–</div>
-        <div class="kpi-sub" id="kpiNetSub"></div>
+        <div class="kpi-value" id="kpiNet" aria-label="Netto-Saldo">–</div>
+        <div class="kpi-sub" id="kpiNetSub" aria-live="polite"></div>
       </div>
-
     </div>
 
+    <!-- Chart Row 1 -->
     <div class="grid-2">
       <div class="card">
         <div class="card-label">Monatsvergleich</div>
-        <div class="chart-wrap h280"><canvas id="barChart"></canvas></div>
+        <div class="chart-wrap h280">
+          <canvas id="barChart" aria-label="Monatsvergleich Balkendiagramm" role="img"></canvas>
+        </div>
       </div>
       <div class="card">
         <div class="card-label">Verteilung (aktueller Monat)</div>
-        <div class="chart-wrap h200"><canvas id="donutChart"></canvas></div>
-        <div id="donutLegend" class="donut-legend"></div>
+        <div class="chart-wrap h200">
+          <canvas id="donutChart" aria-label="Ausgabenverteilung Donut-Diagramm" role="img"></canvas>
+        </div>
+        <div id="donutLegend" class="donut-legend" aria-label="Kategorien-Legende"></div>
       </div>
     </div>
 
+    <!-- Chart Row 2 -->
     <div class="grid-2">
       <div class="card">
         <div class="card-label">Ausgaben nach Kategorie</div>
-        <div id="catBars" class="cat-list"></div>
+        <div id="catBars" class="cat-list" aria-label="Ausgaben nach Kategorie"></div>
       </div>
       <div class="card">
-        <div class="card-label">Trend (letzte 6 Monate)</div>
-        <div class="chart-wrap h220"><canvas id="trendChart"></canvas></div>
+        <div class="card-label">Trend (letzte 12 Monate)</div>
+        <div class="chart-wrap h220">
+          <canvas id="trendChart" aria-label="Kategorie-Trend Liniendiagramm" role="img"></canvas>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ── TRANSACTIONS VIEW ── -->
-  <section class="view" id="view-transactions">
+  <!-- ── TRANSACTIONS ───────────────────────────────── -->
+  <section class="view" id="view-transactions" aria-labelledby="heading-transactions">
     <div class="view-header">
       <div class="view-header-title">
-        <h1>Transaktionen</h1>
-        <span id="txBalanceSummary" class="tx-balance-summary"></span>
+        <h1 id="heading-transactions">Transaktionen</h1>
+        <span id="txBalanceSummary" class="tx-balance-summary" aria-live="polite" aria-label="Bilanz-Zusammenfassung"></span>
       </div>
-      <div class="filter-row">
-        <select id="txAccountFilter" class="select-input">
+      <div class="filter-row" role="group" aria-label="Transaktionen filtern">
+        <label class="sr-only" for="txAccountFilter">Konto</label>
+        <select id="txAccountFilter" class="select-input" aria-label="Konto filtern">
           <option value="">Alle Konten</option>
         </select>
-        <select id="txFilterMonth" class="select-input">
+        <label class="sr-only" for="txFilterMonth">Monat</label>
+        <select id="txFilterMonth" class="select-input" aria-label="Monat filtern">
           <option value="">Alle Monate</option>
         </select>
-        <select id="txFilterCat" class="select-input">
+        <label class="sr-only" for="txFilterCat">Kategorie</label>
+        <select id="txFilterCat" class="select-input" aria-label="Kategorie filtern">
           <option value="">Alle Kategorien</option>
         </select>
-        <input type="text" id="txSearch" class="text-input" placeholder="Suchen…">
+        <label class="sr-only" for="txSearch">Suche</label>
+        <input type="text" id="txSearch" class="text-input" placeholder="Suchen…" aria-label="Transaktionen suchen">
       </div>
     </div>
+
     <div class="card no-pad">
-      <table class="data-table" id="txTable">
+      <table class="data-table" id="txTable" aria-label="Transaktionsliste">
         <thead>
           <tr>
-            <th class="sortable" data-col="date">Datum <span class="sort-icon">↕</span></th>
-            <th class="sortable" data-col="merchant">Händler <span class="sort-icon">↕</span></th>
-            <th>Beschreibung</th>
-            <th class="sortable" data-col="category">Kategorie <span class="sort-icon">↕</span></th>
-            <th class="sortable right" data-col="amount">Betrag <span class="sort-icon">↕</span></th>
+            <th class="sortable" data-col="date" scope="col" aria-sort="descending">
+              Datum <span class="sort-icon" aria-hidden="true">↕</span>
+            </th>
+            <th class="sortable" data-col="merchant" scope="col" aria-sort="none">
+              Händler <span class="sort-icon" aria-hidden="true">↕</span>
+            </th>
+            <th scope="col">Beschreibung</th>
+            <th class="sortable" data-col="category" scope="col" aria-sort="none">
+              Kategorie <span class="sort-icon" aria-hidden="true">↕</span>
+            </th>
+            <th class="sortable right" data-col="amount" scope="col" aria-sort="none">
+              Betrag <span class="sort-icon" aria-hidden="true">↕</span>
+            </th>
           </tr>
         </thead>
-        <tbody id="txBody"></tbody>
+        <tbody id="txBody" aria-live="polite"></tbody>
       </table>
     </div>
-    <div class="pagination" id="txPagination"></div>
+    <nav class="pagination" id="txPagination" aria-label="Seitennavigation"></nav>
   </section>
 
-  <!-- ── ETF VIEW ── -->
-  <section class="view" id="view-etf">
+  <!-- ── ETF PORTFOLIO ──────────────────────────────── -->
+  <section class="view" id="view-etf" aria-labelledby="heading-etf">
     <div class="view-header">
-      <h1>ETF Portfolio</h1>
-      <button class="btn-primary" id="refreshPricesBtn">Preise aktualisieren</button>
+      <h1 id="heading-etf">ETF Portfolio</h1>
+      <button class="btn-primary" id="refreshPricesBtn" aria-label="Aktuelle Kurse von Yahoo Finance laden">
+        Kurse aktualisieren
+      </button>
     </div>
 
-    <div class="kpi-row" id="etfKpiRow">
-      <div class="kpi-card">
+    <!-- ETF KPIs -->
+    <div class="kpi-row" id="etfKpiRow" role="list" aria-label="Portfolio Kennzahlen">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Investiert</div>
-        <div class="kpi-value accent" id="etfInvested">–</div>
+        <div class="kpi-value accent" id="etfInvested" aria-label="Investierter Betrag">–</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Aktueller Wert</div>
-        <div class="kpi-value" id="etfValue">–</div>
+        <div class="kpi-value" id="etfValue" aria-label="Aktueller Portfoliowert">–</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Gewinn/Verlust</div>
-        <div class="kpi-value" id="etfGain">–</div>
+      <div class="kpi-card" role="listitem">
+        <div class="kpi-label">Gewinn / Verlust</div>
+        <div class="kpi-value" id="etfGain" aria-label="Gesamtgewinn oder -verlust" aria-live="polite">–</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" role="listitem">
         <div class="kpi-label">Performance</div>
-        <div class="kpi-value" id="etfPerf">–</div>
+        <div class="kpi-value" id="etfPerf" aria-label="Gesamtperformance in Prozent" aria-live="polite">–</div>
       </div>
     </div>
 
+    <!-- Positions & History -->
     <div class="grid-2">
       <div class="card">
-        <div class="card-label">Positionen</div>
-        <div id="etfPositions"></div>
+        <div class="card-label">Aktive Positionen</div>
+        <div id="etfPositions" aria-live="polite"></div>
       </div>
       <div class="card">
-        <div class="card-label">Kaufhistorie</div>
-        <div class="chart-wrap h260"><canvas id="etfHistoryChart"></canvas></div>
+        <div class="card-label">Kaufhistorie – kumuliert</div>
+        <div class="chart-wrap h260">
+          <canvas id="etfHistoryChart" aria-label="Kumulierter Investitionsverlauf" role="img"></canvas>
+        </div>
       </div>
     </div>
 
-    <!-- 5-Jahres-Prognose -->
+    <!-- 5-Year Forecast -->
     <div class="card" id="etfForecastCard">
       <div class="card-header-row">
         <div class="card-label">5-Jahres-Prognose</div>
         <span class="card-hint">Best 10% · Ø 7% · Worst 3% p.a. inkl. monatl. Sparplan</span>
       </div>
-      <div class="chart-wrap h280"><canvas id="etfForecastChart"></canvas></div>
+      <div class="chart-wrap h280">
+        <canvas id="etfForecastChart" aria-label="5-Jahres Prognose-Liniendiagramm" role="img"></canvas>
+      </div>
       <div class="forecast-table-wrap">
-        <table class="data-table forecast-table" id="etfForecastTable">
+        <table class="data-table forecast-table" id="etfForecastTable" aria-label="5-Jahres Prognose Tabelle">
           <thead>
             <tr>
-              <th>Jahr</th>
-              <th class="right accent-best">Best (10%)</th>
-              <th class="right accent-casual">Ø Casual (7%)</th>
-              <th class="right accent-worst">Worst (3%)</th>
+              <th scope="col">Jahr</th>
+              <th class="right accent-best" scope="col">Best (10%)</th>
+              <th class="right accent-casual" scope="col">Ø Casual (7%)</th>
+              <th class="right accent-worst" scope="col">Worst (3%)</th>
             </tr>
           </thead>
           <tbody id="etfForecastBody"></tbody>
@@ -206,101 +277,140 @@
       </div>
     </div>
 
+    <!-- Add Position Form -->
     <div class="card">
       <div class="card-label">Position hinzufügen</div>
-      <form id="etfAddForm" class="etf-add-form">
+      <form id="etfAddForm" class="etf-add-form" novalidate aria-label="Neue ETF-Position anlegen">
         <div class="etf-form-row">
           <div class="etf-form-field">
-            <label class="form-label">ISIN *</label>
-            <input type="text" id="etfAddIsin" class="text-input" placeholder="z. B. IE00B4L5Y983" required>
+            <label class="form-label" for="etfAddIsin">ISIN <abbr title="Pflichtfeld" aria-label="Pflichtfeld">*</abbr></label>
+            <input type="text" id="etfAddIsin" class="text-input"
+                   placeholder="IE00B4L5Y983" required
+                   aria-describedby="isin-hint"
+                   autocomplete="off" spellcheck="false">
+            <span id="isin-hint" class="sr-only">International Securities Identification Number, z. B. IE00B4L5Y983</span>
           </div>
           <div class="etf-form-field">
-            <label class="form-label">Name *</label>
-            <input type="text" id="etfAddName" class="text-input" placeholder="z. B. iShares Core MSCI World" required>
+            <label class="form-label" for="etfAddName">Name <abbr title="Pflichtfeld" aria-label="Pflichtfeld">*</abbr></label>
+            <input type="text" id="etfAddName" class="text-input"
+                   placeholder="iShares Core MSCI World" required autocomplete="off">
           </div>
           <div class="etf-form-field">
-            <label class="form-label">WKN</label>
-            <input type="text" id="etfAddWkn" class="text-input" placeholder="z. B. A0RPWH">
+            <label class="form-label" for="etfAddWkn">WKN</label>
+            <input type="text" id="etfAddWkn" class="text-input"
+                   placeholder="A0RPWH" autocomplete="off" spellcheck="false">
           </div>
           <div class="etf-form-field">
-            <label class="form-label">Ticker (Yahoo)</label>
-            <input type="text" id="etfAddTicker" class="text-input" placeholder="z. B. IWDA.AS">
+            <label class="form-label" for="etfAddTicker">Ticker (Yahoo)</label>
+            <input type="text" id="etfAddTicker" class="text-input"
+                   placeholder="IWDA.AS" autocomplete="off" spellcheck="false">
           </div>
           <div class="etf-form-field">
-            <label class="form-label">Sparplan EUR/Monat</label>
-            <input type="number" id="etfAddAmount" class="text-input" placeholder="0" min="0" step="0.01">
+            <label class="form-label" for="etfAddAmount">Sparplan EUR/Monat</label>
+            <input type="number" id="etfAddAmount" class="text-input"
+                   placeholder="0" min="0" step="0.01" autocomplete="off">
           </div>
         </div>
-        <div id="etfAddError" class="form-error" style="display:none"></div>
-        <button type="submit" class="btn-primary" id="etfAddBtn">Hinzufügen</button>
+        <div id="etfAddError" class="form-error" style="display:none" role="alert" aria-live="assertive"></div>
+        <button type="submit" class="btn-primary" id="etfAddBtn">
+          Position hinzufügen
+        </button>
       </form>
     </div>
 
+    <!-- All Purchases -->
     <div class="card">
       <div class="card-label">Alle Käufe</div>
       <div class="scroll-table">
-        <table class="data-table" id="etfPurchaseTable">
+        <table class="data-table" id="etfPurchaseTable" aria-label="Alle ETF-Käufe">
           <thead>
-            <tr><th>Datum</th><th>Position</th><th>Preis</th><th>Stück</th><th class="right">Gesamt</th></tr>
+            <tr>
+              <th scope="col">Datum</th>
+              <th scope="col">Position</th>
+              <th scope="col">Preis</th>
+              <th scope="col">Stück</th>
+              <th class="right" scope="col">Gesamt</th>
+            </tr>
           </thead>
-          <tbody id="etfPurchaseBody"></tbody>
+          <tbody id="etfPurchaseBody" aria-live="polite"></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <!-- ── IMPORT VIEW ── -->
-  <section class="view" id="view-import">
+  <!-- ── IMPORT ──────────────────────────────────────── -->
+  <section class="view" id="view-import" aria-labelledby="heading-import">
     <div class="view-header">
-      <h1>PDF Import</h1>
+      <h1 id="heading-import">PDF Import</h1>
     </div>
 
     <div class="import-area">
+      <!-- Account Name -->
       <div class="card">
         <div class="card-label">Kontoname (optional)</div>
         <div class="account-name-row">
-          <input type="text" id="importAccountName" class="text-input" placeholder="z. B. Girokonto, Tagesgeld …" style="max-width:320px">
-          <span class="account-name-hint">Wird automatisch aus IBAN erkannt – hier als Alias überschreibbar</span>
+          <label class="sr-only" for="importAccountName">Kontoname oder Alias</label>
+          <input type="text" id="importAccountName" class="text-input"
+                 placeholder="z. B. Girokonto, Tagesgeld …"
+                 style="max-width:320px"
+                 aria-describedby="account-name-hint">
+          <span id="account-name-hint" class="account-name-hint">
+            Wird automatisch aus IBAN erkannt – hier als Alias überschreibbar
+          </span>
         </div>
       </div>
 
-      <div class="drop-zone" id="dropZone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropZone"
+           role="button" tabindex="0"
+           aria-label="DKB Kontoauszug PDF hochladen – hier ablegen oder klicken"
+           aria-describedby="drop-zone-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
         <p>DKB Kontoauszug PDF hier ablegen</p>
-        <p class="drop-sub">oder klicken zum Auswählen</p>
-        <input type="file" id="fileInput" accept=".pdf" multiple hidden>
+        <p class="drop-sub" id="drop-zone-hint">oder klicken zum Auswählen · mehrere Dateien möglich</p>
+        <input type="file" id="fileInput" accept=".pdf" multiple hidden aria-label="PDF-Datei auswählen">
       </div>
 
-      <div id="importQueue" class="import-queue"></div>
+      <!-- Import Queue -->
+      <div id="importQueue" class="import-queue" aria-live="polite" aria-label="Import-Warteschlange"></div>
 
-      <div class="card" id="importResult" style="display:none">
+      <!-- Import Result -->
+      <div class="card" id="importResult" style="display:none" aria-live="polite">
         <div class="card-label">Import Ergebnis</div>
         <div id="importResultContent"></div>
       </div>
     </div>
 
+    <!-- Accounts -->
     <div class="card">
       <div class="card-label">Meine Konten</div>
-      <div id="accountList"></div>
+      <div id="accountList" aria-live="polite"></div>
     </div>
 
+    <!-- Import History -->
     <div class="card">
       <div class="card-label">Importierte Auszüge</div>
-      <div id="importHistory"></div>
+      <div id="importHistory" aria-live="polite"></div>
     </div>
   </section>
 
 </main>
 
-<!-- Category Edit Modal -->
-<div class="modal-overlay" id="catModal" style="display:none">
+<!-- ══ CATEGORY EDIT MODAL ═════════════════════════════ -->
+<div class="modal-overlay" id="catModal" style="display:none"
+     role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <span>Kategorie ändern</span>
-      <button class="btn-icon" id="catModalClose">✕</button>
+      <span id="catModalTitle">Kategorie ändern</span>
+      <button class="btn-icon" id="catModalClose" aria-label="Modal schließen">✕</button>
     </div>
-    <div id="catModalDesc" class="modal-desc"></div>
-    <select id="catModalSelect" class="select-input full-width"></select>
+    <div id="catModalDesc" class="modal-desc" aria-label="Transaktion"></div>
+    <label class="form-label" for="catModalSelect">Neue Kategorie</label>
+    <select id="catModalSelect" class="select-input full-width" aria-label="Kategorie auswählen"></select>
     <div class="modal-actions">
       <button class="btn-secondary" id="catModalCancel">Abbrechen</button>
       <button class="btn-primary" id="catModalSave">Speichern</button>
@@ -308,14 +418,18 @@
   </div>
 </div>
 
-<!-- Account Rename Modal -->
-<div class="modal-overlay" id="accountModal" style="display:none">
+<!-- ══ ACCOUNT RENAME MODAL ════════════════════════════ -->
+<div class="modal-overlay" id="accountModal" style="display:none"
+     role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <span>Konto umbenennen</span>
-      <button class="btn-icon" id="accountModalClose">✕</button>
+      <span id="accountModalTitle">Konto umbenennen</span>
+      <button class="btn-icon" id="accountModalClose" aria-label="Modal schließen">✕</button>
     </div>
-    <input type="text" id="accountModalName" class="text-input full-width" placeholder="Kontoname">
+    <label class="form-label" for="accountModalName">Neuer Kontoname</label>
+    <input type="text" id="accountModalName" class="text-input full-width"
+           placeholder="z. B. Girokonto DKB"
+           aria-label="Kontoname eingeben">
     <div class="modal-actions">
       <button class="btn-secondary" id="accountModalCancel">Abbrechen</button>
       <button class="btn-primary" id="accountModalSave">Speichern</button>

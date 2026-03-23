@@ -8,10 +8,10 @@ let etfHistoryInst    = null;
 let etfForecastInst   = null;
 
 const CHART_DEFAULTS = {
-  backgroundColor: '#1a1e28',
-  borderColor: '#242836',
-  titleColor: '#e8eaf0',
-  bodyColor: '#9ca3af',
+  backgroundColor: '#161b2e',
+  borderColor: '#1f2640',
+  titleColor: '#e2e6f0',
+  bodyColor: '#7a8499',
 };
 
 function tooltipPlugin() {
@@ -21,21 +21,24 @@ function tooltipPlugin() {
     borderWidth: 1,
     titleColor: CHART_DEFAULTS.titleColor,
     bodyColor: CHART_DEFAULTS.bodyColor,
-    padding: 10,
+    padding: 12,
+    cornerRadius: 2,
+    titleFont: { family: 'IBM Plex Mono', size: 11, weight: '500' },
+    bodyFont:  { family: 'IBM Plex Mono', size: 11 },
   };
 }
 
 function axisStyle() {
   return {
-    ticks: { color: '#6b7280', font: { family: 'DM Mono', size: 11 } },
-    grid: { color: '#242836' },
-    border: { color: '#242836' },
+    ticks: { color: '#5a647a', font: { family: 'IBM Plex Mono', size: 10 } },
+    grid: { color: '#1c2238' },
+    border: { color: '#1f2640' },
   };
 }
 
 export function initCharts() {
-  Chart.defaults.color = '#6b7280';
-  Chart.defaults.font.family = 'DM Mono';
+  Chart.defaults.color = '#5a647a';
+  Chart.defaults.font.family = 'IBM Plex Mono';
 }
 
 export function renderBarChart(allSummary, selectedYear = null, selectedMonth = null) {
@@ -93,13 +96,13 @@ export function renderBarChart(allSummary, selectedYear = null, selectedMonth = 
         {
           label: 'Ausgaben',
           data: recent.map(s => s.expenses),
-          backgroundColor: '#f87171cc',
+          backgroundColor: 'rgba(224, 90, 106, 0.75)',
           borderRadius: 2,
         },
         {
           label: 'Einnahmen',
           data: recent.map(s => s.income),
-          backgroundColor: '#4ade80cc',
+          backgroundColor: 'rgba(61, 207, 142, 0.75)',
           borderRadius: 2,
         },
       ],
@@ -111,7 +114,7 @@ export function renderBarChart(allSummary, selectedYear = null, selectedMonth = 
         legend: {
           display: true,
           position: 'bottom',
-          labels: { color: '#6b7280', font: { family: 'DM Mono', size: 10 }, boxWidth: 10, padding: 12 },
+          labels: { color: '#5a647a', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 8, padding: 14 },
         },
         tooltip: {
           ...tooltipPlugin(),
@@ -205,7 +208,7 @@ export async function renderTrendChart(accountId = null, year = null) {
   if (existing) existing.remove();
   ctx.style.display = '';
 
-  const FALLBACK_PALETTE = ['#f0a500','#e05a7a','#c084fc','#3d9cf5','#34d399','#fb7185','#22d3ee','#a3e635'];
+  const FALLBACK_PALETTE = ['#c9a84c','#e05a6a','#b07ef8','#4d9de0','#3dcf8e','#f87686','#30c9e8','#a8d94a'];
   const monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
   // Trailing-Monate ohne Daten abschneiden
@@ -251,7 +254,7 @@ export async function renderTrendChart(accountId = null, year = null) {
         legend: {
           display: true,
           position: 'bottom',
-          labels: { color: '#6b7280', font: { family: 'DM Mono', size: 10 }, boxWidth: 10, padding: 12 },
+          labels: { color: '#5a647a', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 8, padding: 14 },
         },
         tooltip: {
           ...tooltipPlugin(),
@@ -285,35 +288,35 @@ export function renderEtfForecastChart(aggregate) {
         {
           label: 'Best (10%)',
           data: mkData('best'),
-          borderColor: '#4ade80',
-          backgroundColor: 'rgba(74,222,128,0.08)',
+          borderColor: '#3dcf8e',
+          backgroundColor: 'rgba(61,207,142,0.08)',
           borderWidth: 2,
           borderDash: [6, 3],
           pointRadius: 3,
-          pointBackgroundColor: '#4ade80',
+          pointBackgroundColor: '#3dcf8e',
           tension: 0.2,
           fill: false,
         },
         {
           label: 'Casual (7%)',
           data: mkData('casual'),
-          borderColor: '#22d3ee',
-          backgroundColor: 'rgba(34,211,238,0.08)',
+          borderColor: '#4d9de0',
+          backgroundColor: 'rgba(77,157,224,0.08)',
           borderWidth: 2.5,
           pointRadius: 4,
-          pointBackgroundColor: '#22d3ee',
+          pointBackgroundColor: '#4d9de0',
           tension: 0.2,
           fill: false,
         },
         {
           label: 'Worst (3%)',
           data: mkData('worst'),
-          borderColor: '#f87171',
-          backgroundColor: 'rgba(248,113,113,0.06)',
+          borderColor: '#e05a6a',
+          backgroundColor: 'rgba(224,90,106,0.06)',
           borderWidth: 2,
           borderDash: [6, 3],
           pointRadius: 3,
-          pointBackgroundColor: '#f87171',
+          pointBackgroundColor: '#e05a6a',
           tension: 0.2,
           fill: false,
         },
@@ -326,7 +329,7 @@ export function renderEtfForecastChart(aggregate) {
         legend: {
           display: true,
           position: 'bottom',
-          labels: { color: '#6b7280', font: { family: 'DM Mono', size: 10 }, boxWidth: 10, padding: 14 },
+          labels: { color: '#5a647a', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 8, padding: 14 },
         },
         tooltip: {
           ...tooltipPlugin(),
@@ -368,8 +371,8 @@ export function renderEtfHistoryChart(purchases, positions) {
       datasets: [{
         label: 'Kumuliert investiert',
         data: invested,
-        borderColor: '#22d3ee',
-        backgroundColor: 'rgba(34,211,238,0.08)',
+        borderColor: '#4d9de0',
+        backgroundColor: 'rgba(77,157,224,0.08)',
         borderWidth: 2,
         pointRadius: 3,
         fill: true,
